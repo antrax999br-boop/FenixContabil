@@ -9,6 +9,9 @@ interface Message {
     receiver_id: string;
     created_at: string;
     sender_name?: string;
+    file_url?: string;
+    file_type?: string;
+    file_name?: string;
 }
 
 interface ChatWidgetProps {
@@ -25,6 +28,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
 
     // 1. Fetch Employees list on mount
     useEffect(() => {
@@ -123,18 +128,57 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
         setMessages([]);
     };
 
-    const handleSend = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !selectedUser) return;
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0 || !selectedUser) return;
+
+        const file = e.target.files[0];
+        setUploading(true);
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `${currentUser.id}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('chat-uploads')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('chat-uploads')
+                .getPublicUrl(filePath);
+
+            await sendMessage(
+                file.name, // Content fallback
+                publicUrl,
+                file.type.startsWith('image/') ? 'image' : 'file',
+                file.name
+            );
+
+        } catch (error: any) {
+            console.error("Error uploading:", error);
+            alert('Erro ao enviar arquivo: ' + error.message);
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const sendMessage = async (content: string, fileUrl?: string, fileType?: string, fileName?: string) => {
+        if (!selectedUser) return;
 
         const tempId = Math.random().toString();
         const msg: Message = {
             id: tempId,
-            content: newMessage,
+            content,
             sender_id: currentUser.id,
             receiver_id: selectedUser.id,
             created_at: new Date().toISOString(),
-            sender_name: currentUser.name
+            sender_name: currentUser.name,
+            file_url: fileUrl,
+            file_type: fileType,
+            file_name: fileName
         };
 
         setMessages(prev => [...prev, msg]);
@@ -146,7 +190,10 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
                 .insert([{
                     content: msg.content,
                     sender_id: currentUser.id,
-                    receiver_id: selectedUser.id
+                    receiver_id: selectedUser.id,
+                    file_url: fileUrl,
+                    file_type: fileType,
+                    file_name: fileName
                 }]);
 
             if (error) {
@@ -155,6 +202,12 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const handleSend = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newMessage.trim()) return;
+        sendMessage(newMessage);
     };
 
     return (
@@ -222,10 +275,33 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
                             return (
                                 <div key={msg.id || idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                                     <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm ${isMe
-                                            ? 'bg-brand-orange text-white rounded-tr-none'
-                                            : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'
+                                        ? 'bg-brand-orange text-white rounded-tr-none'
+                                        : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'
                                         }`}>
-                                        {msg.content}
+                                        {/* FILE / IMAGE RENDERING */}
+                                        {msg.file_url ? (
+                                            <div className="flex flex-col gap-2">
+                                                {msg.file_type === 'image' ? (
+                                                    <div className="relative group cursor-pointer">
+                                                        <img
+                                                            src={msg.file_url}
+                                                            alt="Anexo"
+                                                            className="rounded-lg max-w-full max-h-48 object-cover border border-white/20"
+                                                            onClick={() => window.open(msg.file_url, '_blank')}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-2 py-1 rounded bg-black/10 hover:bg-black/20 text-xs font-semibold break-all transition-colors ${isMe ? 'text-white' : 'text-slate-700'}`}>
+                                                        <span className="material-symbols-outlined text-lg">description</span>
+                                                        {msg.file_name || 'Arquivo'}
+                                                        <span className="material-symbols-outlined text-base">download</span>
+                                                    </a>
+                                                )}
+                                                <span className="text-[10px] opacity-75">{msg.content}</span>
+                                            </div>
+                                        ) : (
+                                            <span>{msg.content}</span>
+                                        )}
                                     </div>
                                     <span className="text-[9px] text-slate-400 mt-1 px-1 opacity-70">
                                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -239,17 +315,34 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
 
             {/* FOOTER (INPUT) */}
             {view === 'chat' && (
-                <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex gap-2 shrink-0">
+                <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex gap-2 shrink-0 items-center">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handleFileSelect}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-slate-400 hover:text-brand-orange transition-colors"
+                        title="Anexar arquivo"
+                        disabled={uploading}
+                    >
+                        <span className="material-symbols-outlined text-2xl">{uploading ? 'hourglass_empty' : 'attach_file'}</span>
+                    </button>
+
                     <input
                         type="text"
                         value={newMessage}
                         onChange={e => setNewMessage(e.target.value)}
-                        placeholder="Digite algo..."
+                        placeholder={uploading ? "Enviando arquivo..." : "Digite algo..."}
+                        disabled={uploading}
                         className="flex-1 bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-brand-orange/20"
                     />
                     <button
                         type="submit"
-                        disabled={!newMessage.trim()}
+                        disabled={!newMessage.trim() || uploading}
                         className="size-9 bg-brand-orange text-white rounded-full flex items-center justify-center hover:bg-orange-600 disabled:opacity-50 transition-colors shadow-md shadow-brand-orange/20"
                     >
                         <span className="material-symbols-outlined text-lg pb-0.5 ml-0.5">send</span>
