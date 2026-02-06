@@ -14,6 +14,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
     { id: 'clientes', label: 'Clientes', icon: 'group' },
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
     { id: 'calendario', label: 'Calendário', icon: 'calendar_today' },
+    { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
   ];
 
   // Logo Phoenix (Versão otimizada para o sistema)
@@ -45,8 +46,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
             key={item.id}
             onClick={() => onTabChange(item.id)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${activeTab === item.id
-                ? 'bg-white/10 text-white shadow-sm'
-                : 'text-white/70 hover:bg-white/5 hover:text-white'
+              ? 'bg-white/10 text-white shadow-sm'
+              : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
           >
             <span className="material-symbols-outlined text-[22px]">{item.icon}</span>

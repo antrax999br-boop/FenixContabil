@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import ClientsPage from './pages/Clients';
 import InvoicesPage from './pages/Invoices';
 import CalendarPage from './pages/Calendar';
+import SettingsPage from './pages/Settings';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
@@ -350,8 +351,17 @@ const App: React.FC = () => {
       case 'inicio': return <Dashboard state={state} onTabChange={setActiveTab} />;
       case 'clientes': return <ClientsPage clients={state.clients} onAdd={addClient} />;
       case 'notas': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} />;
-      case 'calendario': return <CalendarPage events={state.events} onAdd={addEvent} onRemove={removeEvent} />;
-      default: return <Dashboard state={state} onTabChange={setActiveTab} />;
+      case 'calendario':
+        return <CalendarPage events={state.events} onEventChange={() => fetchData(state.currentUser!.id)} />;
+      case 'configuracoes':
+        return <SettingsPage currentUser={state.currentUser!} />; // We know user exists here
+      default:
+        return <Dashboard
+          user={state.currentUser!}
+          clients={state.clients}
+          invoices={state.invoices}
+          previousInvoices={[]} // TODO
+        />;
     }
   };
 
