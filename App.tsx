@@ -420,7 +420,11 @@ const App: React.FC = () => {
       case 'notas': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} />;
       case 'relatorios': return <ReportsPage state={state} />;
       case 'calendario':
-        return <CalendarPage events={state.events} onEventChange={() => fetchData(state.currentUser!.id)} />;
+        return <CalendarPage
+          events={state.events}
+          onAdd={addEvent}
+          onRemove={removeEvent}
+        />;
       case 'configuracoes':
         return <SettingsPage currentUser={state.currentUser!} />; // We know user exists here
       default:
