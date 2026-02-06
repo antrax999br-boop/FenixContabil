@@ -14,10 +14,10 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
   const diffTime = today.getTime() - dueDate.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  if (diffDays > 0) {
+  if (diffDays > 1) {
     const interestPerDay = (client.interest_percent / 100);
     const totalInterest = invoice.original_value * interestPerDay * diffDays;
-    
+
     return {
       ...invoice,
       status: InvoiceStatus.OVERDUE,
