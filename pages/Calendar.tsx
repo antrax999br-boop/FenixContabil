@@ -11,7 +11,7 @@ interface CalendarPageProps {
 const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) => {
   const [showModal, setShowModal] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
-  
+
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -27,10 +27,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
   const calendarData = useMemo(() => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
-    
+
     const firstDayOfMonth = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
+
     const days = [];
     // Dias vazios do mês anterior
     for (let i = 0; i < firstDayOfMonth; i++) {
@@ -47,15 +47,20 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
     setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   };
 
+  const handleDayClick = (dayStr: string) => {
+    setNewEvent(prev => ({ ...prev, date: dayStr }));
+    setShowModal(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.title || !newEvent.date) return;
     onAdd(newEvent);
-    setNewEvent({ 
-      title: '', 
-      description: '', 
-      date: new Date().toISOString().split('T')[0], 
-      time: '09:00' 
+    setNewEvent({
+      title: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      time: '09:00'
     });
     setShowModal(false);
   };
@@ -77,20 +82,20 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
             {monthNames[viewDate.getMonth()]} <span className="text-primary">{viewDate.getFullYear()}</span>
           </h2>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => changeMonth(-1)}
               className="size-10 flex items-center justify-center bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary transition-all shadow-sm group"
               aria-label="Mês Anterior"
             >
               <span className="material-symbols-outlined text-xl text-slate-600 group-hover:text-primary">chevron_left</span>
             </button>
-            <button 
+            <button
               onClick={() => setViewDate(new Date())}
               className="px-4 py-2 text-xs font-bold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
             >
               Hoje
             </button>
-            <button 
+            <button
               onClick={() => changeMonth(1)}
               className="size-10 flex items-center justify-center bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary transition-all shadow-sm group"
               aria-label="Próximo Mês"
@@ -99,29 +104,29 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
             </button>
           </div>
         </div>
-        
+
         <div className="flex-1 grid grid-cols-7 border-l border-t border-slate-100">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
             <div key={day} className="py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center border-b border-r border-slate-100 bg-slate-50/30">
               {day}
             </div>
           ))}
-          
+
           {calendarData.map((dayNum, i) => {
-            const isToday = dayNum === new Date().getDate() && 
-                            viewDate.getMonth() === new Date().getMonth() && 
-                            viewDate.getFullYear() === new Date().getFullYear();
-            
+            const isToday = dayNum === new Date().getDate() &&
+              viewDate.getMonth() === new Date().getMonth() &&
+              viewDate.getFullYear() === new Date().getFullYear();
+
             const dayString = dayNum ? `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}` : null;
-            
+
             const dayEvents = dayString ? events.filter(e => e.date === dayString) : [];
 
             return (
-              <div 
-                key={i} 
-                className={`min-h-[100px] border-r border-b border-slate-100 p-2 text-left relative group transition-colors ${
-                  !dayNum ? 'bg-slate-50/30' : 'hover:bg-slate-50/80 cursor-default'
-                } ${isToday ? 'bg-primary/5' : ''}`}
+              <div
+                key={i}
+                onClick={() => dayString && handleDayClick(dayString)}
+                className={`min-h-[100px] border-r border-b border-slate-100 p-2 text-left relative group transition-colors ${!dayNum ? 'bg-slate-50/30' : 'hover:bg-slate-100/50 cursor-pointer'
+                  } ${isToday ? 'bg-primary/5' : ''}`}
               >
                 {dayNum && (
                   <>
@@ -130,8 +135,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
                     </span>
                     <div className="mt-1 space-y-1 max-h-[100px] overflow-y-auto scrollbar-hide">
                       {dayEvents.map(e => (
-                        <div 
-                          key={e.id} 
+                        <div
+                          key={e.id}
                           className="bg-primary text-white text-[9px] px-1.5 py-1 rounded-md truncate font-bold shadow-sm flex items-center gap-1"
                           title={`${e.time} - ${e.title}`}
                         >
@@ -150,7 +155,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
 
       {/* Sidebar de Eventos */}
       <div className="w-full lg:w-80 flex flex-col gap-6">
-        <button 
+        <button
           onClick={() => setShowModal(true)}
           className="w-full bg-brand-orange hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-brand-orange/20 flex items-center justify-center gap-2 transition-all active:scale-95"
         >
@@ -172,7 +177,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
             ) : (
               sortedEvents.map(event => (
                 <div key={event.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200 group relative hover:border-primary/30 transition-all">
-                  <button 
+                  <button
                     onClick={() => onRemove(event.id)}
                     className="absolute top-2 right-2 size-6 bg-white text-slate-400 hover:text-red-500 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all border border-slate-100"
                   >
@@ -207,8 +212,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
                 <span className="material-symbols-outlined text-primary">edit_calendar</span>
                 Novo Evento
               </h3>
-              <button 
-                onClick={() => setShowModal(false)} 
+              <button
+                onClick={() => setShowModal(false)}
                 className="size-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-full transition-all"
               >
                 <span className="material-symbols-outlined">close</span>
@@ -217,55 +222,55 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Título do Evento</label>
-                <input 
+                <input
                   required
                   autoFocus
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400"
                   value={newEvent.title}
-                  onChange={e => setNewEvent({...newEvent, title: e.target.value})}
+                  onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
                   placeholder="Ex: Reunião com Cliente Stellar"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Data</label>
-                  <input 
+                  <input
                     required
                     type="date"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                     value={newEvent.date}
-                    onChange={e => setNewEvent({...newEvent, date: e.target.value})}
+                    onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Horário</label>
-                  <input 
+                  <input
                     required
                     type="time"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                     value={newEvent.time}
-                    onChange={e => setNewEvent({...newEvent, time: e.target.value})}
+                    onChange={e => setNewEvent({ ...newEvent, time: e.target.value })}
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Descrição (Opcional)</label>
-                <textarea 
+                <textarea
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all h-24 resize-none placeholder:text-slate-400"
                   value={newEvent.description}
-                  onChange={e => setNewEvent({...newEvent, description: e.target.value})}
+                  onChange={e => setNewEvent({ ...newEvent, description: e.target.value })}
                   placeholder="Detalhes adicionais sobre o compromisso..."
                 />
               </div>
               <div className="pt-2 flex gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowModal(false)}
                   className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 py-3 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
                 >
