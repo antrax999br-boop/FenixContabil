@@ -167,6 +167,47 @@ const App: React.FC = () => {
     }
   };
 
+  const updateClient = async (client: Client) => {
+    const { error } = await supabase
+      .from('clients')
+      .update({
+        name: client.name,
+        cnpj: client.cnpj,
+        interest_percent: client.interest_percent,
+        observations: client.observations
+      })
+      .eq('id', client.id);
+
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        clients: prev.clients.map(c => c.id === client.id ? client : c)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao atualizar cliente: ' + error.message);
+    }
+  };
+
+  const deleteClient = async (id: string) => {
+    if (!confirm('Tem certeza? Isso apagará todas as notas associadas.')) return;
+
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        clients: prev.clients.filter(c => c.id !== id)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao excluir cliente: ' + error.message);
+    }
+  };
+
   const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'>) => {
     // Initial calculation for insertion
     const client = state.clients.find(c => c.id === invoiceData.client_id);
@@ -349,7 +390,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'inicio': return <Dashboard state={state} onTabChange={setActiveTab} />;
-      case 'clientes': return <ClientsPage clients={state.clients} onAdd={addClient} />;
+      case 'clientes': return <ClientsPage clients={state.clients} onAdd={addClient} onUpdate={updateClient} onDelete={deleteClient} />;
       case 'notas': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} />;
       case 'calendario':
         return <CalendarPage events={state.events} onEventChange={() => fetchData(state.currentUser!.id)} />;
