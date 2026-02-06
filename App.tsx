@@ -10,6 +10,7 @@ import ClientsPage from './pages/Clients';
 import InvoicesPage from './pages/Invoices';
 import CalendarPage from './pages/Calendar';
 import SettingsPage from './pages/Settings';
+import ReportsPage from './pages/Reports';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
@@ -417,6 +418,7 @@ const App: React.FC = () => {
       case 'inicio': return <Dashboard state={state} onTabChange={setActiveTab} />;
       case 'clientes': return <ClientsPage clients={state.clients} onAdd={addClient} onUpdate={updateClient} onDelete={deleteClient} />;
       case 'notas': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} />;
+      case 'relatorios': return <ReportsPage state={state} />;
       case 'calendario':
         return <CalendarPage events={state.events} onEventChange={() => fetchData(state.currentUser!.id)} />;
       case 'configuracoes':
