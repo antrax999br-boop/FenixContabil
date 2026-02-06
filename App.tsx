@@ -44,10 +44,14 @@ const App: React.FC = () => {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        fetchData(session.user.id);
-      } else {
+        // Avoid showing loading screen on token refresh or updates
+        const isSilent = event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED';
+        if (event !== 'SIGNED_OUT') {
+          fetchData(session.user.id, isSilent);
+        }
+      } else if (event === 'SIGNED_OUT') {
         setState(prev => ({
           ...prev,
           currentUser: null,
@@ -60,8 +64,8 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchData = async (userId: string) => {
-    setState(prev => ({ ...prev, loading: true }));
+  const fetchData = async (userId: string, silent = false) => {
+    if (!silent) setState(prev => ({ ...prev, loading: true }));
     try {
       // Fetch Profile
       const { data: profile } = await supabase
