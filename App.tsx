@@ -46,8 +46,8 @@ const App: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        // Avoid showing loading screen on token refresh or updates
-        const isSilent = event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED';
+        // Avoid showing loading screen on token refresh, updates, or returning to tab
+        const isSilent = event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_IN';
         if (event !== 'SIGNED_OUT') {
           fetchData(session.user.id, isSilent);
         }
