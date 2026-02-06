@@ -13,6 +13,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { calculateInvoiceStatusAndValues } from './utils/calculations';
 import { supabase } from './utils/supabase';
+import { playRobustAlarm, stopRobustAlarm } from './utils/alarm';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -225,43 +226,13 @@ const App: React.FC = () => {
     }
   };
 
+
+
   /* Alarm Logic */
   const [activeAlarm, setActiveAlarm] = useState<CalendarEvent | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Initialize Audio Logic
-  useEffect(() => {
-    // Local file to prevent network buffering issues
-    const audio = new Audio('/alarm.ogg');
-    audio.loop = true;
-    audio.preload = 'auto';
-    audio.volume = 1.0;
-    audioRef.current = audio;
-
-    // Optional: Unlock audio on first interaction
-    const unlockAudio = () => {
-      audio.play().then(() => {
-        audio.pause();
-        audio.currentTime = 0;
-      }).catch(() => { });
-      document.removeEventListener('click', unlockAudio);
-    };
-    document.addEventListener('click', unlockAudio);
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      document.removeEventListener('click', unlockAudio);
-    };
-  }, []);
 
   const dismissAlarm = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    stopRobustAlarm();
     setActiveAlarm(null);
   };
 
@@ -288,15 +259,8 @@ const App: React.FC = () => {
             // Set Active Alarm to show Modal
             setActiveAlarm(event);
 
-            // Play Persistent Sound
-            if (audioRef.current) {
-              const playPromise = audioRef.current.play();
-              if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                  console.error("Erro ao tocar alarme (Bloqueio do navegador?):", error);
-                });
-              }
-            }
+            // Play Robust Sound (Web Audio API)
+            playRobustAlarm();
 
             // Browser Notification
             if (Notification.permission === 'granted') {
@@ -316,12 +280,7 @@ const App: React.FC = () => {
     }
 
     const interval = setInterval(checkReminders, 10000); // Check every 10 seconds
-    return () => {
-      clearInterval(interval);
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
+    return () => clearInterval(interval);
   }, [state.events, notifiedEvents]);
 
   const addEvent = async (eventData: Omit<CalendarEvent, 'id' | 'created_by'>) => {
