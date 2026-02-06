@@ -282,7 +282,19 @@ const App: React.FC = () => {
 
   /* Alarm Logic */
   const [activeAlarm, setActiveAlarm] = useState<CalendarEvent | null>(null);
-  const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
+  // Persist read notifications
+  const [readNotifications, setReadNotifications] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('phoenix_read_notifications');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('phoenix_read_notifications', JSON.stringify(Array.from(readNotifications)));
+  }, [readNotifications]);
 
   const markNotificationRead = (id: string) => {
     setReadNotifications(prev => {
