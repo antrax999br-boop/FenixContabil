@@ -278,6 +278,15 @@ const App: React.FC = () => {
 
   /* Alarm Logic */
   const [activeAlarm, setActiveAlarm] = useState<CalendarEvent | null>(null);
+  const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
+
+  const markNotificationRead = (id: string) => {
+    setReadNotifications(prev => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
+  };
 
   const dismissAlarm = () => {
     stopRobustAlarm();
@@ -406,6 +415,10 @@ const App: React.FC = () => {
     }
   };
 
+  // Calculate Unread Notifications
+  const todayStr = new Date().toISOString().split('T')[0];
+  const hasUnread = state.events.some(e => e.date === todayStr && !readNotifications.has(e.id));
+
   return (
     <div className="flex h-screen overflow-hidden bg-background-light">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onLogout={logout} />
@@ -415,12 +428,15 @@ const App: React.FC = () => {
           onNotificationsClick={() => setShowNotifications(!showNotifications)}
           onChatClick={() => setShowChat(!showChat)}
           onProfileClick={() => setShowProfile(true)}
+          hasUnreadNotifications={hasUnread}
         />
         {showNotifications && (
           <div className="fixed top-16 right-24 z-50">
             <NotificationsDropdown
               events={state.events}
               onClose={() => setShowNotifications(false)}
+              readNotifications={readNotifications}
+              onMarkRead={markNotificationRead}
             />
           </div>
         )}
