@@ -4,17 +4,16 @@ import React from 'react';
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  onLogout: () => void;
+  // onLogout removed from Sidebar
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: 'dashboard' },
     { id: 'notas', label: 'Notas Fiscais', icon: 'receipt_long' },
     { id: 'clientes', label: 'Clientes', icon: 'group' },
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
     { id: 'calendario', label: 'Calendário', icon: 'calendar_today' },
-    { id: 'configuracoes', label: 'Configurações', icon: 'settings' },
   ];
 
   // Logo Phoenix (Versão otimizada para o sistema)
@@ -55,22 +54,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
           </button>
         ))}
 
-        <div className="pt-8 pb-2 px-3">
-          <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Sistema</p>
-        </div>
-
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-all">
-          <span className="material-symbols-outlined text-[22px]">settings</span>
-          <span className="text-sm font-medium">Configurações</span>
-        </button>
-
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-all"
-        >
-          <span className="material-symbols-outlined text-[22px]">logout</span>
-          <span className="text-sm font-medium">Sair</span>
-        </button>
       </nav>
 
       <div className="p-4 border-t border-white/10">

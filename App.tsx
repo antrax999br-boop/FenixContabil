@@ -437,13 +437,15 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background-light">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onLogout={logout} />
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex flex-col flex-1 min-w-0">
         <Header
           user={state.currentUser}
           onNotificationsClick={() => setShowNotifications(!showNotifications)}
           onChatClick={() => setShowChat(!showChat)}
           onProfileClick={() => setShowProfile(true)}
+          onSettingsClick={() => setActiveTab('configuracoes')}
+          onLogout={logout}
           hasUnreadNotifications={hasUnread}
         />
         {showNotifications && (
