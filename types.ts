@@ -15,6 +15,8 @@ export interface User {
   name: string;
   email: string;
   profile: UserProfile;
+  avatar_url?: string;
+  job_title?: string;
 }
 
 export interface Client {

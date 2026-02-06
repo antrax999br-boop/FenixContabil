@@ -6,9 +6,10 @@ interface HeaderProps {
   user: User;
   onNotificationsClick: () => void;
   onChatClick: () => void;
+  onProfileClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onNotificationsClick, onChatClick }) => {
+const Header: React.FC<HeaderProps> = ({ user, onNotificationsClick, onChatClick, onProfileClick }) => {
   return (
     <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-20">
       <div className="flex items-center gap-8">
@@ -32,16 +33,23 @@ const Header: React.FC<HeaderProps> = ({ user, onNotificationsClick, onChatClick
           <span className="material-symbols-outlined text-xl">chat_bubble_outline</span>
         </button>
         <div className="h-8 w-px bg-slate-200 mx-1"></div>
-        <div className="flex items-center gap-3">
+        <div
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity p-1 rounded-lg hover:bg-slate-50"
+          onClick={onProfileClick}
+        >
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-slate-800">{user.name}</p>
             <p className="text-[11px] font-medium text-slate-500 uppercase tracking-tight leading-none">
-              {user.profile === 'admin' ? 'Contador Sênior' : 'Analista Júnior'}
+              {user.job_title || (user.profile === 'admin' ? 'Contador Sênior' : 'Analista Júnior')}
             </p>
           </div>
           <div
             className="size-10 rounded-full bg-primary/10 border border-slate-200 bg-cover bg-center"
-            style={{ backgroundImage: `url('https://picsum.photos/seed/${user.id}/100/100')` }}
+            style={{
+              backgroundImage: user.avatar_url
+                ? `url('${user.avatar_url}')`
+                : `url('https://picsum.photos/seed/${user.id}/100/100')`
+            }}
           />
         </div>
       </div>

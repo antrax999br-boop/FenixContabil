@@ -13,6 +13,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
 import NotificationsDropdown from './components/NotificationsDropdown';
+import ProfileModal from './components/ProfileModal';
 import { calculateInvoiceStatusAndValues } from './utils/calculations';
 import { supabase } from './utils/supabase';
 import { playRobustAlarm, stopRobustAlarm } from './utils/alarm';
@@ -30,6 +31,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inicio');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Auth & Data Fetching
   useEffect(() => {
@@ -361,6 +363,7 @@ const App: React.FC = () => {
           user={state.currentUser}
           onNotificationsClick={() => setShowNotifications(!showNotifications)}
           onChatClick={() => setShowChat(!showChat)}
+          onProfileClick={() => setShowProfile(true)}
         />
         {showNotifications && (
           <div className="fixed top-16 right-24 z-50">
@@ -376,6 +379,14 @@ const App: React.FC = () => {
       </div>
 
       {showChat && <ChatWidget currentUser={state.currentUser} onClose={() => setShowChat(false)} />}
+
+      {showProfile && state.currentUser && (
+        <ProfileModal
+          user={state.currentUser}
+          onClose={() => setShowProfile(false)}
+          onUpdate={() => fetchData(state.currentUser!.id)}
+        />
+      )}
 
       {/* TELA DE ALARME / MODAL */}
       {activeAlarm && (
