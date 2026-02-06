@@ -204,11 +204,32 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
         }
     };
 
+    const handleClearChat = async () => {
+        if (!selectedUser || !confirm('Tem certeza que deseja apagar TODA a conversa com este usuário? Isso não pode ser desfeito.')) return;
+
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .delete()
+                .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${currentUser.id})`);
+
+            if (error) throw error;
+
+            setMessages([]);
+            alert('Conversa apagada com sucesso.');
+        } catch (error: any) {
+            console.error('Error clearing chat:', error);
+            alert('Erro ao apagar conversa. Verifique se você tem permissão.');
+        }
+    };
+
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMessage.trim()) return;
         sendMessage(newMessage);
     };
+
+    const isAdminUser = currentUser.email === 'laercio@laercio.com.br';
 
     return (
         <div className="fixed bottom-4 right-4 w-80 h-96 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 border border-slate-200 animate-in slide-in-from-bottom-10 fade-in duration-300">
@@ -225,9 +246,20 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
                         {view === 'list' ? 'Equipe Phoenix' : selectedUser?.name || 'Chat'}
                     </h3>
                 </div>
-                <button onClick={onClose} className="text-white/70 hover:text-white transition-colors flex">
-                    <span className="material-symbols-outlined text-lg">close</span>
-                </button>
+                <div className="flex items-center gap-1">
+                    {view === 'chat' && isAdminUser && (
+                        <button
+                            onClick={handleClearChat}
+                            className="text-white/70 hover:text-red-400 transition-colors flex p-1"
+                            title="Apagar conversa (Restrito)"
+                        >
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                        </button>
+                    )}
+                    <button onClick={onClose} className="text-white/70 hover:text-white transition-colors flex p-1">
+                        <span className="material-symbols-outlined text-lg">close</span>
+                    </button>
+                </div>
             </div>
 
             {/* CONTENT */}
