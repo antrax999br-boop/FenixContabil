@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, CalendarEvent, AppState,
   UserProfile, InvoiceStatus
@@ -225,37 +225,136 @@ const App: React.FC = () => {
     }
   };
 
+  /* Alarm Logic */
+  const [activeAlarm, setActiveAlarm] = useState<CalendarEvent | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize Audio Logic
+  useEffect(() => {
+    // Local file to prevent network buffering issues
+    const audio = new Audio('/alarm.ogg');
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.volume = 1.0;
+    audioRef.current = audio;
+
+    // Optional: Unlock audio on first interaction
+    const unlockAudio = () => {
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }).catch(() => { });
+      document.removeEventListener('click', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio);
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      document.removeEventListener('click', unlockAudio);
+    };
+  }, []);
+
+  const dismissAlarm = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setActiveAlarm(null);
+  };
+
+  const [notifiedEvents, setNotifiedEvents] = useState<Set<string>>(new Set());
+
+  // Event Reminder Check
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = new Date();
+      const currentDate = now.toISOString().split('T')[0];
+      const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+
+      state.events.forEach(event => {
+        // Ensure event time is in HH:MM format for comparison
+        const eventTimeShort = event.time.substring(0, 5);
+
+        if (event.date === currentDate && eventTimeShort === currentTime) {
+          if (!notifiedEvents.has(event.id)) {
+            console.log('Alarme ativado para:', event.title);
+
+            // Mark as notified immediately
+            setNotifiedEvents(prev => new Set(prev).add(event.id));
+
+            // Set Active Alarm to show Modal
+            setActiveAlarm(event);
+
+            // Play Persistent Sound
+            if (audioRef.current) {
+              const playPromise = audioRef.current.play();
+              if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                  console.error("Erro ao tocar alarme (Bloqueio do navegador?):", error);
+                });
+              }
+            }
+
+            // Browser Notification
+            if (Notification.permission === 'granted') {
+              new Notification(`ALARME: ${event.title}`, {
+                body: event.description || `Horário: ${event.time}`,
+                requireInteraction: true
+              });
+            }
+          }
+        }
+      });
+    };
+
+    // Request notification permission on load
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const interval = setInterval(checkReminders, 10000); // Check every 10 seconds
+    return () => {
+      clearInterval(interval);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, [state.events, notifiedEvents]);
+
   const addEvent = async (eventData: Omit<CalendarEvent, 'id' | 'created_by'>) => {
-    // assuming profile id is needed or name. Schema says 'created_by' is uuid fk to profile.
-    // But types.ts says string. Let's fix types vs schema logic. 
-    // Schema: created_by uuid references profiles.
-    // Types: created_by string.
     if (!state.currentUser) return;
+
+    // Remove application-specific keys and map to DB
+    const { date, time, title, description } = eventData;
 
     const { data, error } = await supabase
       .from('calendar_events')
       .insert([{
-        ...eventData,
-        event_date: eventData.date, // Map date -> event_date
-        event_time: eventData.time, // Map time -> event_time
+        title,
+        description,
+        event_date: date,
+        event_time: time,
         created_by: state.currentUser.id
       }])
       .select()
       .single();
 
     if (data && !error) {
-      // Map back from DB fields to App fields if different
       const newEvent: CalendarEvent = {
         id: data.id,
         title: data.title,
         description: data.description,
         date: data.event_date,
         time: data.event_time,
-        created_by: state.currentUser.name // Display name in UI
+        created_by: state.currentUser.name
       };
       setState(prev => ({ ...prev, events: [...prev.events, newEvent] }));
     } else if (error) {
       console.error(error);
+      alert('Erro ao criar evento: ' + error.message);
     }
   };
 
@@ -300,6 +399,37 @@ const App: React.FC = () => {
           {renderContent()}
         </main>
       </div>
+
+      {/* TELA DE ALARME / MODAL */}
+      {activeAlarm && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center relative overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col items-center">
+
+            <div className="mb-6 relative">
+              <div className="h-20 w-20 bg-orange-100 rounded-full flex items-center justify-center relative">
+                <span className="material-symbols-outlined text-4xl text-brand-orange">notifications_active</span>
+                <span className="absolute top-1 right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase tracking-tight">{activeAlarm.title}</h2>
+            <p className="text-slate-500 mb-8 font-medium text-sm px-4">{activeAlarm.description || 'Horário do evento chegou!'}</p>
+
+            <button
+              onClick={dismissAlarm}
+              className="w-full bg-brand-orange hover:bg-orange-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-brand-orange/30 transition-all hover:scale-[1.02] active:scale-95 text-base flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined">check_circle</span>
+              ACEITAR
+            </button>
+
+            <div className="mt-6 flex items-center gap-1.5 text-slate-400 font-bold text-xs uppercase tracking-widest bg-slate-50 py-1.5 px-3 rounded-lg">
+              <span className="material-symbols-outlined text-sm">schedule</span>
+              {activeAlarm.time.substring(0, 5)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
