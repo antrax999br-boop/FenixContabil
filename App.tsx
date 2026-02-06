@@ -11,6 +11,8 @@ import InvoicesPage from './pages/Invoices';
 import CalendarPage from './pages/Calendar';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import ChatWidget from './components/ChatWidget';
+import NotificationsDropdown from './components/NotificationsDropdown';
 import { calculateInvoiceStatusAndValues } from './utils/calculations';
 import { supabase } from './utils/supabase';
 import { playRobustAlarm, stopRobustAlarm } from './utils/alarm';
@@ -26,6 +28,8 @@ const App: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState('inicio');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   // Auth & Data Fetching
   useEffect(() => {
@@ -353,11 +357,25 @@ const App: React.FC = () => {
     <div className="flex h-screen overflow-hidden bg-background-light">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onLogout={logout} />
       <div className="flex flex-col flex-1 min-w-0">
-        <Header user={state.currentUser} />
+        <Header
+          user={state.currentUser}
+          onNotificationsClick={() => setShowNotifications(!showNotifications)}
+          onChatClick={() => setShowChat(!showChat)}
+        />
+        {showNotifications && (
+          <div className="fixed top-16 right-24 z-50">
+            <NotificationsDropdown
+              events={state.events}
+              onClose={() => setShowNotifications(false)}
+            />
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto p-4 sm:p-8">
           {renderContent()}
         </main>
       </div>
+
+      {showChat && <ChatWidget currentUser={state.currentUser} onClose={() => setShowChat(false)} />}
 
       {/* TELA DE ALARME / MODAL */}
       {activeAlarm && (
