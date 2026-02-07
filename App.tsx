@@ -337,7 +337,9 @@ const App: React.FC = () => {
             setActiveAlarm(event);
 
             // Play Robust Sound (Web Audio API)
-            playRobustAlarm();
+            const savedVolume = localStorage.getItem('fenix_alarm_volume');
+            const volume = savedVolume ? parseFloat(savedVolume) : 0.5;
+            playRobustAlarm(volume);
 
             // Browser Notification
             if (Notification.permission === 'granted') {

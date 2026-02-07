@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../utils/supabase';
 import { User } from '../types';
+import { playRobustAlarm, stopRobustAlarm } from '../utils/alarm';
 
 interface SettingsProps {
     currentUser: User;
@@ -15,6 +16,10 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
 
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [volume, setVolume] = useState(() => {
+        const saved = localStorage.getItem('fenix_alarm_volume');
+        return saved ? parseFloat(saved) : 0.5;
+    });
 
     // Edit State
     const [editingUser, setEditingUser] = useState<any | null>(null);
@@ -138,6 +143,65 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                 </button>
             </header>
 
+            {/* GLOBAL SETTINGS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="size-10 bg-brand-orange/10 rounded-xl flex items-center justify-center text-brand-orange">
+                            <span className="material-symbols-outlined">volume_up</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-800">Volume do Alarme</h3>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Ajuste a intensidade do som</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <span className="material-symbols-outlined text-slate-400">volume_down</span>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={volume}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    setVolume(val);
+                                    localStorage.setItem('fenix_alarm_volume', val.toString());
+                                }}
+                                className="flex-1 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-brand-orange"
+                            />
+                            <span className="material-symbols-outlined text-slate-400">volume_up</span>
+                            <span className="text-sm font-bold text-slate-700 min-w-[3ch]">
+                                {Math.round(volume * 100)}%
+                            </span>
+                        </div>
+
+                        <div className="pt-2">
+                            <button
+                                onClick={() => {
+                                    playRobustAlarm(volume);
+                                    setTimeout(stopRobustAlarm, 2000);
+                                }}
+                                className="w-full py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-lg">play_circle</span>
+                                TESTAR SOM (2s)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center items-center text-center opacity-50 grayscale">
+                    <div className="size-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                        <span className="material-symbols-outlined">more_horiz</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Opções Adicionais</p>
+                    <p className="text-[10px] text-slate-300 font-medium">Em breve: Temas e Sons personalizados</p>
+                </div>
+            </div>
+
             {/* USERS LIST */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
@@ -174,8 +238,8 @@ const Settings: React.FC<SettingsProps> = ({ currentUser }) => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${user.role === 'admin'
-                                                ? 'bg-purple-50 text-purple-700 border-purple-100'
-                                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                                            ? 'bg-purple-50 text-purple-700 border-purple-100'
+                                            : 'bg-slate-100 text-slate-600 border-slate-200'
                                             }`}>
                                             {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
                                         </span>

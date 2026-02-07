@@ -21,7 +21,7 @@ const stopAlarm = () => {
     }
 };
 
-export const playRobustAlarm = () => {
+export const playRobustAlarm = (volume: number = 0.5) => {
     stopAlarm(); // Ensure previous is stopped
 
     try {
@@ -36,6 +36,9 @@ export const playRobustAlarm = () => {
         // Create Oscillator (Sound Wave)
         oscillator = audioCtx.createOscillator();
         gainNode = audioCtx.createGain();
+
+        // Apply volume
+        gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
 
         oscillator.type = 'sawtooth'; // Aggressive alarm tone
         oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
