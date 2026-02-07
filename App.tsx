@@ -286,7 +286,7 @@ const App: React.FC = () => {
   // Persist read notifications
   const [readNotifications, setReadNotifications] = useState<Set<string>>(() => {
     try {
-      const stored = localStorage.getItem('phoenix_read_notifications');
+      const stored = localStorage.getItem('fenix_read_notifications');
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch {
       return new Set();
@@ -294,7 +294,7 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    localStorage.setItem('phoenix_read_notifications', JSON.stringify(Array.from(readNotifications)));
+    localStorage.setItem('fenix_read_notifications', JSON.stringify(Array.from(readNotifications)));
   }, [readNotifications]);
 
   const markNotificationRead = (id: string) => {

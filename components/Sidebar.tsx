@@ -16,16 +16,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     { id: 'calendario', label: 'Calendário', icon: 'calendar_today' },
   ];
 
-  // Logo Phoenix (Versão otimizada para o sistema)
-  const phoenixLogo = "/phoenix-logo.png";
+  // Logo Fenix (Versão otimizada para o sistema)
+  const fenixLogo = "/fenix-logo.png";
 
   return (
     <aside className="w-64 bg-brand-navy shrink-0 flex flex-col h-full">
       <div className="p-6 flex items-center gap-3">
         <div className="size-12 bg-white rounded-xl flex items-center justify-center relative overflow-hidden p-1 shadow-md">
           <img
-            src={phoenixLogo}
-            alt="Phoenix Logo"
+            src={fenixLogo}
+            alt="Fenix Logo"
             className="w-full h-full object-contain z-10"
             onError={(e) => {
               // Fallback caso a imagem falhe
@@ -34,7 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           />
         </div>
         <div>
-          <h1 className="text-white text-lg font-bold leading-tight">Phoenix</h1>
+          <h1 className="text-white text-lg font-bold leading-tight">Fenix</h1>
           <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Contabilidade</p>
         </div>
       </div>

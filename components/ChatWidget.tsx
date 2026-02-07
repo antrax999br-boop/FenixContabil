@@ -243,7 +243,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
                         </button>
                     )}
                     <h3 className="font-bold text-sm tracking-wide">
-                        {view === 'list' ? 'Equipe Phoenix' : selectedUser?.name || 'Chat'}
+                        {view === 'list' ? 'Equipe Fenix' : selectedUser?.name || 'Chat'}
                     </h3>
                 </div>
                 <div className="flex items-center gap-1">

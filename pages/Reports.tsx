@@ -83,7 +83,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(12);
         doc.text(`Período: ${monthName.charAt(0).toUpperCase() + monthName.slice(1)} de ${year}`, 14, 30);
-        doc.text(`Phoenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 140, 30);
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 140, 30);
 
         // Summary Box
         doc.setDrawColor(230);
@@ -366,8 +366,8 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                                                 <td className="px-10 py-6">
                                                     <div className="flex justify-center">
                                                         <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter shadow-sm border border-transparent ${inv.status === InvoiceStatus.PAID ? 'bg-green-50 text-green-700 border-green-100' :
-                                                                inv.status === InvoiceStatus.OVERDUE ? 'bg-red-50 text-red-700 border-red-100' :
-                                                                    'bg-yellow-50 text-yellow-700 border-yellow-100'
+                                                            inv.status === InvoiceStatus.OVERDUE ? 'bg-red-50 text-red-700 border-red-100' :
+                                                                'bg-yellow-50 text-yellow-700 border-yellow-100'
                                                             }`}>
                                                             {inv.status === InvoiceStatus.PAID ? 'Liquidado' : inv.status === InvoiceStatus.OVERDUE ? 'Vencido' : 'Pendente'}
                                                         </span>

@@ -16,7 +16,7 @@ const Header: React.FC<HeaderProps> = ({ user, onNotificationsClick, onChatClick
   return (
     <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-20">
       <div className="flex items-center gap-8">
-        <h2 className="text-lg font-bold text-slate-800">Phoenix Contábil</h2>
+        <h2 className="text-lg font-bold text-slate-800">Fenix Contábil</h2>
       </div>
 
       <div className="flex items-center gap-4">

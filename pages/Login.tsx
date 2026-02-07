@@ -9,7 +9,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const phoenixLogo = "/phoenix-logo.png";
+  const fenixLogo = "/fenix-logo.png";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +21,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="mb-8 flex flex-col items-center text-center">
         <div className="relative w-28 h-28 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-4 p-3 overflow-hidden border border-slate-100 ring-4 ring-white">
           <img
-            src={phoenixLogo}
-            alt="Phoenix Contábil Logo"
+            src={fenixLogo}
+            alt="Fenix Contábil Logo"
             className="w-full h-full object-contain"
             onError={(e) => {
               (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
@@ -31,7 +31,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="absolute -top-1 -right-1 w-5 h-5 bg-brand-orange rounded-full border-4 border-white"></div>
         </div>
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-          Phoenix <span className="text-primary">Contábil</span>
+          Fenix <span className="text-primary">Contábil</span>
         </h1>
         <p className="text-slate-500 text-sm mt-1 font-medium italic">"Excelência e Renovação em Contabilidade"</p>
       </div>
@@ -109,7 +109,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
           <span>Suporte Técnico</span>
         </div>
-        <p className="text-[10px] text-slate-400 mt-4">© 2024 Phoenix Sistemas Contábeis Ltda. Tecnologia para Contadores.</p>
+        <p className="text-[10px] text-slate-400 mt-4">© 2024 Fenix Sistemas Contábeis Ltda. Tecnologia para Contadores.</p>
       </footer>
     </div>
   );

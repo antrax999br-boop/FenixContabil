@@ -12,7 +12,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
   const paidTotal = state.invoices
     .filter(i => i.status === InvoiceStatus.PAID)
     .reduce((acc, i) => acc + i.final_value, 0);
-  
+
   const pendingCount = state.invoices.filter(i => i.status === InvoiceStatus.NOT_PAID).length;
   const pendingTotal = state.invoices
     .filter(i => i.status === InvoiceStatus.NOT_PAID)
@@ -83,7 +83,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
           <button className="text-xs font-bold text-primary hover:underline">Personalizar</button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button 
+          <button
             onClick={() => onTabChange('calendario')}
             className="group bg-white p-5 rounded-xl border border-slate-100 hover:border-primary/40 transition-all shadow-sm text-left"
           >
@@ -99,7 +99,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
             </div>
           </button>
 
-          <button 
+          <button
             onClick={() => onTabChange('clientes')}
             className="group bg-white p-5 rounded-xl border border-slate-100 hover:border-primary/40 transition-all shadow-sm text-left"
           >
@@ -115,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
             </div>
           </button>
 
-          <button 
+          <button
             onClick={() => onTabChange('notas')}
             className="group bg-white p-5 rounded-xl border border-slate-100 hover:border-primary/40 transition-all shadow-sm text-left"
           >
@@ -159,8 +159,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
                   <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="size-8 rounded-full bg-slate-200 bg-cover" 
+                        <div
+                          className="size-8 rounded-full bg-slate-200 bg-cover"
                           style={{ backgroundImage: `url('https://picsum.photos/seed/${inv.client_id}/100/100')` }}
                         />
                         <span className="text-sm font-semibold text-slate-800">{client?.name || 'Cliente Desconhecido'}</span>
@@ -170,11 +170,10 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
                     <td className="px-6 py-4 text-sm font-bold text-slate-800">{formatCurrency(inv.final_value)}</td>
                     <td className="px-6 py-4 text-sm text-slate-500">{inv.due_date}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        inv.status === InvoiceStatus.PAID ? 'bg-green-100 text-green-700' :
-                        inv.status === InvoiceStatus.OVERDUE ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${inv.status === InvoiceStatus.PAID ? 'bg-green-100 text-green-700' :
+                          inv.status === InvoiceStatus.OVERDUE ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700'
+                        }`}>
                         {inv.status}
                       </span>
                     </td>
@@ -187,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
       </section>
 
       <footer className="py-6 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-xs font-medium text-slate-500">© 2024 Phoenix Contábil. Todos os direitos reservados.</p>
+        <p className="text-xs font-medium text-slate-500">© 2024 Fenix Contábil. Todos os direitos reservados.</p>
         <div className="flex items-center gap-6">
           <button className="text-xs font-bold text-slate-400 hover:text-primary transition-colors">Política de Privacidade</button>
           <button className="text-xs font-bold text-slate-400 hover:text-primary transition-colors">Termos de Serviço</button>

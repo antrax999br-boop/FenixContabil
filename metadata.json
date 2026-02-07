@@ -1,6 +1,5 @@
-
 {
-  "name": "Phoenix Contábil",
+  "name": "Fenix Contábil",
   "description": "Sistema completo de gestão para escritórios de contabilidade com dashboard financeiro, gestão de clientes, faturamento com cálculo automático de juros e calendário de obrigações fiscais.",
   "requestFramePermissions": []
 }

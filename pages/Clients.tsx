@@ -136,7 +136,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                   className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900 placeholder:text-slate-400"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Phoenix Soluções LTDA"
+                  placeholder="Ex: Fenix Soluções LTDA"
                 />
               </div>
               <div>
