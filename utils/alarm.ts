@@ -37,10 +37,13 @@ export const playRobustAlarm = (volume: number = 0.5) => {
         oscillator = audioCtx.createOscillator();
         gainNode = audioCtx.createGain();
 
-        // Apply volume
-        gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+        // Apply volume with a softer scaling (0.2x multiplier)
+        // This makes 100% in UI equal to a safe 20% in system gain
+        const scaledVolume = volume * 0.2;
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(scaledVolume, audioCtx.currentTime + 0.1);
 
-        oscillator.type = 'sawtooth'; // Aggressive alarm tone
+        oscillator.type = 'triangle'; // Softer than sawtooth but still audible
         oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
 
         // Connect
@@ -54,10 +57,11 @@ export const playRobustAlarm = (volume: number = 0.5) => {
         alarmInterval = setInterval(() => {
             if (oscillator && audioCtx) {
                 const freq = isHigh ? 800 : 600;
-                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                // Smooth frequency transition
+                oscillator.frequency.exponentialRampToValueAtTime(freq, audioCtx.currentTime + 0.1);
                 isHigh = !isHigh;
             }
-        }, 400);
+        }, 500);
 
     } catch (e) {
         console.error("Web Audio API Error:", e);
