@@ -11,7 +11,7 @@ interface NotificationsDropdownProps {
 const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({ events, onClose, readNotifications, onMarkRead }) => {
     // Filter for TODAY's events
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = now.toLocaleDateString('en-CA');
 
     // Show ALL events for today, sorted by time
     const todayEvents = events

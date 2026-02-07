@@ -15,7 +15,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-CA'),
     time: '09:00'
   });
 
@@ -59,7 +59,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ events, onAdd, onRemove }) 
     setNewEvent({
       title: '',
       description: '',
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       time: '09:00'
     });
     setShowModal(false);

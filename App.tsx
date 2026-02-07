@@ -316,8 +316,11 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkReminders = () => {
       const now = new Date();
-      const currentDate = now.toISOString().split('T')[0];
+      const currentDate = now.toLocaleDateString('en-CA');
       const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+
+      // Log para auxílio no debug (pode ser removido após verificação)
+      // console.log(`Checando alarmes: ${currentDate} ${currentTime}`);
 
       state.events.forEach(event => {
         // Ensure event time is in HH:MM format for comparison
@@ -438,7 +441,7 @@ const App: React.FC = () => {
   };
 
   // Calculate Unread Notifications
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('en-CA');
   const hasUnread = state.events.some(e => e.date === todayStr && !readNotifications.has(e.id));
 
   return (

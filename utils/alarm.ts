@@ -29,6 +29,10 @@ export const playRobustAlarm = () => {
             audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         }
 
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+
         // Create Oscillator (Sound Wave)
         oscillator = audioCtx.createOscillator();
         gainNode = audioCtx.createGain();
