@@ -5,25 +5,13 @@ import { formatCurrency } from '../utils/calculations';
 interface DailyPaymentsPageProps {
     dailyPayments: DailyPayment[];
     onAdd: (payment: Omit<DailyPayment, 'id' | 'created_at'>) => void;
+    onUpdate: (payment: DailyPayment) => void;
     onDelete: (id: string) => void;
 }
 
-const CATEGORIES = [
-    'Ativos',
-    'Inativos',
-    'Alteração',
-    'Distrato',
-    'Remissão de GPS',
-    'Recal Guia',
-    'Regularização',
-    'Outros',
-    'Rent Invest Fácil',
-    'Abertura',
-    'Parcelamentos'
-];
-
-const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, onAdd, onDelete }) => {
+const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, onAdd, onUpdate, onDelete }) => {
     const [showModal, setShowModal] = useState(false);
+    const [editingPayment, setEditingPayment] = useState<DailyPayment | null>(null);
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [newPayment, setNewPayment] = useState<Omit<DailyPayment, 'id' | 'created_at'>>({
         date: new Date().toISOString().split('T')[0],
@@ -32,13 +20,16 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         value: ''
     });
 
+    // Helper to get day of week in Portuguese
+    const getDayOfWeek = (dateStr: string) => {
+        const date = new Date(dateStr + 'T12:00:00');
+        return date.toLocaleDateString('pt-BR', { weekday: 'long' }).split('-')[0].toUpperCase();
+    };
+
     // Helper to extract numeric value from string (handling Brazilian format)
     const extractValue = (val: string | number): number => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
-        // Se tiver vírgula e ponto, assumimos formato BR (ponto é milhar)
-        // Se tiver só ponto, pode ser decimal (US) ou milhar (BR). 
-        // Para simplificar: removemos todos os pontos e tratamos a vírgula como ponto.
         const hasComma = val.includes(',');
         let cleaned = val;
         if (hasComma) {
@@ -53,18 +44,29 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         ? dailyPayments
         : dailyPayments.filter(p => p.date.startsWith(selectedMonth));
 
-    // Validations: description mandatory, value not empty, category mandatory
-    const isFormValid = newPayment.description.trim() !== '' &&
-        newPayment.category !== '' &&
-        newPayment.value.trim() !== '';
+    const currentForm = editingPayment || newPayment;
+
+    // Validations
+    const isFormValid = currentForm.description.trim() !== '' &&
+        currentForm.category.trim() !== '' &&
+        String(currentForm.value).trim() !== '';
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!isFormValid) return;
 
-        onAdd(newPayment);
+        if (editingPayment) {
+            onUpdate(editingPayment);
+        } else {
+            onAdd(newPayment);
+        }
+
+        handleCloseModal();
+    };
+
+    const handleCloseModal = () => {
         setShowModal(false);
-        // Reset form
+        setEditingPayment(null);
         setNewPayment({
             date: new Date().toISOString().split('T')[0],
             description: '',
@@ -73,18 +75,23 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         });
     };
 
-    const handleInputChange = (field: keyof Omit<DailyPayment, 'id' | 'created_at'>, value: string) => {
-        setNewPayment(prev => ({ ...prev, [field]: value }));
+    const handleEdit = (p: DailyPayment) => {
+        setEditingPayment(p);
+        setShowModal(true);
     };
 
-    // Calculate total sum of numeric values within the filtered month
+    const handleInputChange = (field: keyof Omit<DailyPayment, 'id' | 'created_at'>, value: string) => {
+        if (editingPayment) {
+            setEditingPayment(prev => prev ? ({ ...prev, [field]: value }) : null);
+        } else {
+            setNewPayment(prev => ({ ...prev, [field]: value }));
+        }
+    };
+
+    // Calculate total
     const totalValue = filteredPayments.reduce((acc, curr) => acc + extractValue(curr.value), 0);
 
-    // List of months available in the data
     const availableMonths = Array.from(new Set(dailyPayments.map(p => p.date.slice(0, 7)))).sort().reverse();
-    if (!availableMonths.includes(selectedMonth)) {
-        // availableMonths.push(selectedMonth); // Don't add current month if it's already there
-    }
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -107,7 +114,6 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                             className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm"
                         >
                             <option value="all">VER TODOS OS MESES</option>
-                            {/* Always show current month if not in availableMonths */}
                             {!availableMonths.includes(new Date().toISOString().slice(0, 7)) && (
                                 <option value={new Date().toISOString().slice(0, 7)}>
                                     {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
@@ -141,9 +147,8 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                     <table className="w-full text-left border-collapse whitespace-nowrap">
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50/50">
-                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Data</th>
-                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Descrição / Item</th>
-                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Categoria</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Data / Dia</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Item / Categoria</th>
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Valor / Info</th>
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">Ações</th>
                             </tr>
@@ -151,40 +156,51 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                         <tbody className="divide-y divide-slate-100">
                             {filteredPayments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">
+                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-medium">
                                         Nenhum lançamento encontrado para este mês.
                                     </td>
                                 </tr>
                             ) : (
                                 filteredPayments.map((p) => (
                                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="px-6 py-4 text-sm font-bold text-slate-700">
-                                            {new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm font-bold text-slate-700">{new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}</div>
+                                            <div className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{getDayOfWeek(p.date)}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-sm font-medium text-slate-900">{p.description}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">
-                                                {p.category}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">
+                                                    {p.category}
+                                                </span>
+                                                {p.description && p.description !== p.category && (
+                                                    <span className="text-sm font-medium text-slate-900">{p.description}</span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className="text-sm font-black text-emerald-600">
-                                                {/* If it's purely numeric, format it, otherwise show as is */}
-                                                {!isNaN(extractValue(p.value)) && extractValue(p.value) > 0 && p.value.match(/^[0-9,.]+$/) ?
+                                                {!isNaN(extractValue(p.value)) && extractValue(p.value) > 0 && String(p.value).match(/^[0-9,.]+$/) ?
                                                     formatCurrency(extractValue(p.value)) :
                                                     p.value}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <button
-                                                onClick={() => onDelete(p.id)}
-                                                className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
-                                                title="Excluir Lançamento"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">delete</span>
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => handleEdit(p)}
+                                                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all active:scale-90"
+                                                    title="Editar Lançamento"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => onDelete(p.id)}
+                                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-90"
+                                                    title="Excluir Lançamento"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">delete</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -196,87 +212,133 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
 
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="px-8 py-5 bg-blue-600 text-white flex items-center justify-between">
-                            <h3 className="font-black uppercase tracking-widest text-sm">Novo Registro</h3>
-                            <button onClick={() => setShowModal(false)} className="hover:rotate-90 transition-transform p-1">
+                            <h3 className="font-black uppercase tracking-widest text-sm">{editingPayment ? 'Editar Registro' : 'Lançamento Diário'}</h3>
+                            <button onClick={handleCloseModal} className="hover:rotate-90 transition-transform p-1">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-8">
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data</label>
-                                        <input
-                                            required
-                                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
-                                            type="date"
-                                            value={newPayment.date}
-                                            onChange={e => handleInputChange('date', e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Categoria</label>
-                                        <select
-                                            required
-                                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium appearance-none"
-                                            value={newPayment.category}
-                                            onChange={e => handleInputChange('category', e.target.value)}
-                                        >
-                                            <option value="">Selecione...</option>
-                                            {CATEGORIES.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nome do Item / Descrição</label>
-                                    <input
-                                        required
-                                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
-                                        type="text"
-                                        placeholder="Ex: Hunter, Pago em dinheiro, etc"
-                                        value={newPayment.description}
-                                        onChange={e => handleInputChange('description', e.target.value)}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Valor ou Informação (Letras e Números)</label>
-                                    <input
-                                        required
-                                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-bold"
-                                        type="text"
-                                        placeholder="Ex: 150,00 ou Pago via Pix"
-                                        value={newPayment.value}
-                                        onChange={e => handleInputChange('value', e.target.value)}
-                                    />
-                                </div>
+                        <div className="p-8 max-h-[80vh] overflow-y-auto">
+                            <div className="mb-6">
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data dos Lançamentos</label>
+                                <input
+                                    required
+                                    className="w-full max-w-xs px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
+                                    type="date"
+                                    value={currentForm.date}
+                                    onChange={e => handleInputChange('date', e.target.value)}
+                                />
                             </div>
 
-                            <div className="mt-8 flex gap-3">
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-12 gap-4 pb-2 border-b border-slate-100 mb-2">
+                                    <div className="col-span-7">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Item / Categoria</span>
+                                    </div>
+                                    <div className="col-span-5">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor ou Informação</span>
+                                    </div>
+                                </div>
+
+                                {editingPayment ? (
+                                    <div className="grid grid-cols-12 gap-4 items-center">
+                                        <div className="col-span-7">
+                                            <input
+                                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-all font-medium"
+                                                type="text"
+                                                value={editingPayment.category}
+                                                onChange={e => setEditingPayment({ ...editingPayment, category: e.target.value, description: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="col-span-5">
+                                            <input
+                                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-all font-bold"
+                                                type="text"
+                                                value={editingPayment.value}
+                                                onChange={e => setEditingPayment({ ...editingPayment, value: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {[
+                                            'Ativos', 'Inativos', 'Alteração', 'Distrato',
+                                            'Remissão de GPS', 'Recal Guia', 'Regularização',
+                                            'Rent Invest Fácil', 'Abertura', 'Parcelamentos', 'Outros'
+                                        ].map((cat) => (
+                                            <div key={cat} className="grid grid-cols-12 gap-4 items-center">
+                                                <div className="col-span-7">
+                                                    <div className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-bold text-slate-600">
+                                                        {cat}
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-5">
+                                                    <input
+                                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-all font-bold"
+                                                        type="text"
+                                                        placeholder="Vazio"
+                                                        onChange={e => {
+                                                            // Logic to handle multiple adds would be better with a local state for these inputs
+                                                            // but for now we'll just use a simple approach or update the handleAdd logic
+                                                        }}
+                                                        onBlur={e => {
+                                                            if (e.target.value.trim()) {
+                                                                // We'll collect these on submit
+                                                            }
+                                                        }}
+                                                        id={`input-${cat}`}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="mt-8 flex gap-3 sticky bottom-0 bg-white pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setShowModal(false)}
+                                    onClick={handleCloseModal}
                                     className="flex-1 px-6 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-50 transition-all"
                                 >
                                     Cancelar
                                 </button>
                                 <button
-                                    type="submit"
-                                    disabled={!isFormValid}
-                                    className={`flex-[2] px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 ${isFormValid
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
-                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                                        }`}
+                                    type="button"
+                                    onClick={() => {
+                                        if (editingPayment) {
+                                            onUpdate(editingPayment);
+                                            handleCloseModal();
+                                        } else {
+                                            const items = [
+                                                'Ativos', 'Inativos', 'Alteração', 'Distrato',
+                                                'Remissão de GPS', 'Recal Guia', 'Regularização',
+                                                'Rent Invest Fácil', 'Abertura', 'Parcelamentos', 'Outros'
+                                            ];
+                                            let addedCount = 0;
+                                            items.forEach(cat => {
+                                                const input = document.getElementById(`input-${cat}`) as HTMLInputElement;
+                                                if (input && input.value.trim() !== '') {
+                                                    onAdd({
+                                                        date: currentForm.date,
+                                                        category: cat,
+                                                        description: cat, // Merge as requested
+                                                        value: input.value
+                                                    });
+                                                    addedCount++;
+                                                }
+                                            });
+                                            if (addedCount > 0) handleCloseModal();
+                                        }
+                                    }}
+                                    className="flex-[2] px-6 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-blue-200 active:scale-95 hover:bg-blue-700"
                                 >
-                                    Gravar Lançamento
+                                    {editingPayment ? 'Salvar Alterações' : 'Gravar Tudo'}
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}

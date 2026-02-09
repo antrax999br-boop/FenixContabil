@@ -542,6 +542,28 @@ const App: React.FC = () => {
     }
   };
 
+  const updateDailyPayment = async (payment: DailyPayment) => {
+    const { error } = await supabase
+      .from('daily_payments')
+      .update({
+        date: payment.date,
+        description: payment.description,
+        category: payment.category,
+        value: payment.value
+      })
+      .eq('id', payment.id);
+
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        dailyPayments: prev.dailyPayments.map(p => p.id === payment.id ? payment : p)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao atualizar pagamento diário.');
+    }
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -559,7 +581,7 @@ const App: React.FC = () => {
       case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
       case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="INTERNET" />;
       case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={markPayablePaid} onDelete={deletePayable} />;
-      case 'pagamentos-diarios': return <DailyPaymentsPage dailyPayments={state.dailyPayments} onAdd={addDailyPayment} onDelete={deleteDailyPayment} />;
+      case 'pagamentos-diarios': return <DailyPaymentsPage dailyPayments={state.dailyPayments} onAdd={addDailyPayment} onUpdate={updateDailyPayment} onDelete={deleteDailyPayment} />;
       case 'relatorios': return <ReportsPage state={state} />;
       case 'calendario':
         return <CalendarPage
