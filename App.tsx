@@ -451,10 +451,10 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'inicio': return <Dashboard state={state} onTabChange={setActiveTab} />;
       case 'clientes': return <ClientsPage clients={state.clients} onAdd={addClient} onUpdate={updateClient} onDelete={deleteClient} />;
-      case 'notas': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} />;
-      case 'notas-ativas': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="ATIVOS" />;
-      case 'notas-sem-nota': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
-      case 'notas-internet': return <InvoicesPage state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="INTERNET" />;
+      case 'notas': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} />;
+      case 'notas-ativas': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="ATIVOS" />;
+      case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
+      case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="INTERNET" />;
       case 'relatorios': return <ReportsPage state={state} />;
       case 'calendario':
         return <CalendarPage
