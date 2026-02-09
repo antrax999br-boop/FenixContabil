@@ -64,9 +64,18 @@ export interface Payable {
 export interface DailyPayment {
   id: string; // UUID
   date: string; // YYYY-MM-DD
-  description: string;
-  category: string;
-  value: string;
+  ativos?: string;
+  inativos?: string;
+  alteracao?: string;
+  distrato?: string;
+  remissao_gps?: string;
+  recal_guia?: string;
+  regularizacao?: string;
+  outros?: string;
+  rent_invest_facil?: string;
+  abertura?: string;
+  parcelamentos?: string;
+  total?: string;
   created_at?: string;
 }
 

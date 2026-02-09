@@ -9,25 +9,43 @@ interface DailyPaymentsPageProps {
     onDelete: (id: string) => void;
 }
 
+const categoryFields: (keyof Omit<DailyPayment, 'id' | 'date' | 'created_at' | 'total'>)[] = [
+    'ativos', 'inativos', 'alteracao', 'distrato',
+    'remissao_gps', 'recal_guia', 'regularizacao',
+    'rent_invest_facil', 'abertura', 'parcelamentos', 'outros'
+];
+
+const categoryLabels: Record<string, string> = {
+    ativos: 'Ativos',
+    inativos: 'Inativos',
+    alteracao: 'Alteração',
+    distrato: 'Distrato',
+    remissao_gps: 'Remissão de GPS',
+    recal_guia: 'Recal Guia',
+    regularizacao: 'Regularização',
+    rent_invest_facil: 'Rent Invest Fácil',
+    abertura: 'Abertura',
+    parcelamentos: 'Parcelamentos',
+    outros: 'Outros'
+};
+
 const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, onAdd, onUpdate, onDelete }) => {
     const [showModal, setShowModal] = useState(false);
     const [editingPayment, setEditingPayment] = useState<DailyPayment | null>(null);
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [newPayment, setNewPayment] = useState<Omit<DailyPayment, 'id' | 'created_at'>>({
         date: new Date().toISOString().split('T')[0],
-        description: '',
-        category: '',
-        value: ''
+        ativos: '', inativos: '', alteracao: '', distrato: '',
+        remissao_gps: '', recal_guia: '', regularizacao: '',
+        rent_invest_facil: '', abertura: '', parcelamentos: '', outros: ''
     });
 
-    // Helper to get day of week in Portuguese
     const getDayOfWeek = (dateStr: string) => {
         const date = new Date(dateStr + 'T12:00:00');
         return date.toLocaleDateString('pt-BR', { weekday: 'long' }).split('-')[0].toUpperCase();
     };
 
-    // Helper to extract numeric value from string (handling Brazilian format)
-    const extractValue = (val: string | number): number => {
+    const extractValue = (val: string | number | undefined): number => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
         const hasComma = val.includes(',');
@@ -39,39 +57,20 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         return parseFloat(cleaned) || 0;
     };
 
-    // Filter payments by selected month
     const filteredPayments = selectedMonth === 'all'
         ? dailyPayments
         : dailyPayments.filter(p => p.date.startsWith(selectedMonth));
 
     const currentForm = editingPayment || newPayment;
 
-    // Validations
-    const isFormValid = currentForm.description.trim() !== '' &&
-        currentForm.category.trim() !== '' &&
-        String(currentForm.value).trim() !== '';
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!isFormValid) return;
-
-        if (editingPayment) {
-            onUpdate(editingPayment);
-        } else {
-            onAdd(newPayment);
-        }
-
-        handleCloseModal();
-    };
-
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingPayment(null);
         setNewPayment({
             date: new Date().toISOString().split('T')[0],
-            description: '',
-            category: '',
-            value: ''
+            ativos: '', inativos: '', alteracao: '', distrato: '',
+            remissao_gps: '', recal_guia: '', regularizacao: '',
+            rent_invest_facil: '', abertura: '', parcelamentos: '', outros: ''
         });
     };
 
@@ -88,8 +87,13 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         }
     };
 
-    // Calculate total
-    const totalValue = filteredPayments.reduce((acc, curr) => acc + extractValue(curr.value), 0);
+    // Calculate total for a single payment row
+    const calculateRowTotal = (p: DailyPayment | Omit<DailyPayment, 'id' | 'created_at'>) => {
+        return categoryFields.reduce((sum, field) => sum + extractValue(p[field]), 0);
+    };
+
+    // Overall total
+    const totalValue = filteredPayments.reduce((acc, curr) => acc + calculateRowTotal(curr), 0);
 
     const availableMonths = Array.from(new Set(dailyPayments.map(p => p.date.slice(0, 7)))).sort().reverse();
 
@@ -137,7 +141,7 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                         className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 h-[52px]"
                     >
                         <span className="material-symbols-outlined text-sm">add</span>
-                        Adicionar
+                        Novo Lançamento
                     </button>
                 </div>
             </div>
@@ -148,8 +152,8 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50/50">
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Data / Dia</th>
-                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Item / Categoria</th>
-                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Valor / Info</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Itens Lançados</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Total do Dia</th>
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">Ações</th>
                             </tr>
                         </thead>
@@ -163,28 +167,34 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                             ) : (
                                 filteredPayments.map((p) => (
                                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 align-top">
                                             <div className="text-sm font-bold text-slate-700">{new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}</div>
                                             <div className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{getDayOfWeek(p.date)}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">
-                                                    {p.category}
-                                                </span>
-                                                {p.description && p.description !== p.category && (
-                                                    <span className="text-sm font-medium text-slate-900">{p.description}</span>
-                                                )}
+                                            <div className="flex flex-wrap gap-2 max-w-2xl">
+                                                {categoryFields.map(field => {
+                                                    const val = p[field];
+                                                    if (!val) return null;
+                                                    return (
+                                                        <div key={field} className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex flex-col">
+                                                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{categoryLabels[field]}</span>
+                                                            <span className="text-sm font-bold text-slate-700">
+                                                                {!isNaN(extractValue(val)) && extractValue(val) > 0 && String(val).match(/^[0-9,.]+$/) ?
+                                                                    formatCurrency(extractValue(val)) :
+                                                                    val}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <span className="text-sm font-black text-emerald-600">
-                                                {!isNaN(extractValue(p.value)) && extractValue(p.value) > 0 && String(p.value).match(/^[0-9,.]+$/) ?
-                                                    formatCurrency(extractValue(p.value)) :
-                                                    p.value}
+                                        <td className="px-6 py-4 text-right align-top">
+                                            <span className="text-base font-black text-emerald-600">
+                                                {formatCurrency(calculateRowTotal(p))}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td className="px-6 py-4 text-center align-top">
                                             <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => handleEdit(p)}
@@ -214,90 +224,48 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="px-8 py-5 bg-blue-600 text-white flex items-center justify-between">
-                            <h3 className="font-black uppercase tracking-widest text-sm">{editingPayment ? 'Editar Registro' : 'Lançamento Diário'}</h3>
+                            <h3 className="font-black uppercase tracking-widest text-sm">{editingPayment ? 'Editar Lançamento' : 'Novo Lançamento Diário'}</h3>
                             <button onClick={handleCloseModal} className="hover:rotate-90 transition-transform p-1">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
 
                         <div className="p-8 max-h-[80vh] overflow-y-auto">
-                            <div className="mb-6">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data dos Lançamentos</label>
-                                <input
-                                    required
-                                    className="w-full max-w-xs px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
-                                    type="date"
-                                    value={currentForm.date}
-                                    onChange={e => handleInputChange('date', e.target.value)}
-                                />
-                            </div>
-
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-12 gap-4 pb-2 border-b border-slate-100 mb-2">
-                                    <div className="col-span-7">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Item / Categoria</span>
-                                    </div>
-                                    <div className="col-span-5">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor ou Informação</span>
-                                    </div>
+                            <div className="mb-6 flex items-end justify-between">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data</label>
+                                    <input
+                                        required
+                                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
+                                        type="date"
+                                        value={currentForm.date}
+                                        onChange={e => handleInputChange('date', e.target.value)}
+                                    />
                                 </div>
-
-                                {editingPayment ? (
-                                    <div className="grid grid-cols-12 gap-4 items-center">
-                                        <div className="col-span-7">
-                                            <input
-                                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-all font-medium"
-                                                type="text"
-                                                value={editingPayment.category}
-                                                onChange={e => setEditingPayment({ ...editingPayment, category: e.target.value, description: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="col-span-5">
-                                            <input
-                                                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-all font-bold"
-                                                type="text"
-                                                value={editingPayment.value}
-                                                onChange={e => setEditingPayment({ ...editingPayment, value: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {[
-                                            'Ativos', 'Inativos', 'Alteração', 'Distrato',
-                                            'Remissão de GPS', 'Recal Guia', 'Regularização',
-                                            'Rent Invest Fácil', 'Abertura', 'Parcelamentos', 'Outros'
-                                        ].map((cat) => (
-                                            <div key={cat} className="grid grid-cols-12 gap-4 items-center">
-                                                <div className="col-span-7">
-                                                    <div className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-bold text-slate-600">
-                                                        {cat}
-                                                    </div>
-                                                </div>
-                                                <div className="col-span-5">
-                                                    <input
-                                                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none transition-all font-bold"
-                                                        type="text"
-                                                        placeholder="Vazio"
-                                                        onChange={e => {
-                                                            // Logic to handle multiple adds would be better with a local state for these inputs
-                                                            // but for now we'll just use a simple approach or update the handleAdd logic
-                                                        }}
-                                                        onBlur={e => {
-                                                            if (e.target.value.trim()) {
-                                                                // We'll collect these on submit
-                                                            }
-                                                        }}
-                                                        id={`input-${cat}`}
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </>
-                                )}
+                                <div className="text-right">
+                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total do Lançamento</span>
+                                    <span className="text-2xl font-black text-blue-600">{formatCurrency(calculateRowTotal(currentForm))}</span>
+                                </div>
                             </div>
 
-                            <div className="mt-8 flex gap-3 sticky bottom-0 bg-white pt-4">
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                                    {categoryFields.map(field => (
+                                        <div key={field}>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{categoryLabels[field]}</label>
+                                            <input
+                                                className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-bold text-slate-700"
+                                                type="text"
+                                                placeholder="---"
+                                                value={currentForm[field] || ''}
+                                                onChange={e => handleInputChange(field, e.target.value)}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-10 flex gap-3">
                                 <button
                                     type="button"
                                     onClick={handleCloseModal}
@@ -310,32 +278,14 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                                     onClick={() => {
                                         if (editingPayment) {
                                             onUpdate(editingPayment);
-                                            handleCloseModal();
                                         } else {
-                                            const items = [
-                                                'Ativos', 'Inativos', 'Alteração', 'Distrato',
-                                                'Remissão de GPS', 'Recal Guia', 'Regularização',
-                                                'Rent Invest Fácil', 'Abertura', 'Parcelamentos', 'Outros'
-                                            ];
-                                            let addedCount = 0;
-                                            items.forEach(cat => {
-                                                const input = document.getElementById(`input-${cat}`) as HTMLInputElement;
-                                                if (input && input.value.trim() !== '') {
-                                                    onAdd({
-                                                        date: currentForm.date,
-                                                        category: cat,
-                                                        description: cat, // Merge as requested
-                                                        value: input.value
-                                                    });
-                                                    addedCount++;
-                                                }
-                                            });
-                                            if (addedCount > 0) handleCloseModal();
+                                            onAdd(newPayment);
                                         }
+                                        handleCloseModal();
                                     }}
                                     className="flex-[2] px-6 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-blue-200 active:scale-95 hover:bg-blue-700"
                                 >
-                                    {editingPayment ? 'Salvar Alterações' : 'Gravar Tudo'}
+                                    {editingPayment ? 'Salvar Alterações' : 'Gravar Lançamento'}
                                 </button>
                             </div>
                         </div>

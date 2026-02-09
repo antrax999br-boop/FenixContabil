@@ -525,7 +525,7 @@ const App: React.FC = () => {
       setState(prev => ({ ...prev, dailyPayments: [data, ...prev.dailyPayments] }));
     } else {
       console.error(error);
-      alert('Erro ao adicionar pagamento diário.');
+      alert('Erro ao adicionar lançamento diário.');
     }
   };
 
@@ -538,20 +538,18 @@ const App: React.FC = () => {
       }));
     } else {
       console.error(error);
-      alert('Erro ao excluir pagamento diário.');
+      alert('Erro ao excluir lançamento diário.');
     }
   };
 
   const updateDailyPayment = async (payment: DailyPayment) => {
+    // We send the whole object except internal supabase fields if necessary, 
+    // but supabase.update() with the object is fine.
+    const { id, created_at, ...updateData } = payment;
     const { error } = await supabase
       .from('daily_payments')
-      .update({
-        date: payment.date,
-        description: payment.description,
-        category: payment.category,
-        value: payment.value
-      })
-      .eq('id', payment.id);
+      .update(updateData)
+      .eq('id', id);
 
     if (!error) {
       setState(prev => ({
@@ -560,7 +558,7 @@ const App: React.FC = () => {
       }));
     } else {
       console.error(error);
-      alert('Erro ao atualizar pagamento diário.');
+      alert('Erro ao atualizar lançamento diário.');
     }
   };
 
