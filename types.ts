@@ -64,18 +64,18 @@ export interface Payable {
 export interface DailyPayment {
   id: string; // UUID
   date: string; // YYYY-MM-DD
-  ativos: number;
-  inativos: number;
-  alteracao: number;
-  distrato: number;
-  remissao_gps: number;
-  recal_guia: number;
-  regularizacao: number;
-  outros: number;
-  rent_invest_facil: number;
-  abertura: number;
-  parcelamentos: number;
-  total: number;
+  ativos: string;
+  inativos: string;
+  alteracao: string;
+  distrato: string;
+  remissao_gps: string;
+  recal_guia: string;
+  regularizacao: string;
+  outros: string;
+  rent_invest_facil: string;
+  abertura: string;
+  parcelamentos: string;
+  total: string;
   created_at?: string;
 }
 

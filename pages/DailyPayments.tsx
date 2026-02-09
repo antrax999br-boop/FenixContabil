@@ -13,42 +13,21 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
 
     const [newPayment, setNewPayment] = useState<Omit<DailyPayment, 'id' | 'created_at'>>({
         date: new Date().toISOString().split('T')[0],
-        ativos: 0,
-        inativos: 0,
-        alteracao: 0,
-        distrato: 0,
-        remissao_gps: 0,
-        recal_guia: 0,
-        regularizacao: 0,
-        outros: 0,
-        rent_invest_facil: 0,
-        abertura: 0,
-        parcelamentos: 0,
-        total: 0
+        ativos: '',
+        inativos: '',
+        alteracao: '',
+        distrato: '',
+        remissao_gps: '',
+        recal_guia: '',
+        regularizacao: '',
+        outros: '',
+        rent_invest_facil: '',
+        abertura: '',
+        parcelamentos: '',
+        total: ''
     });
 
-    // Calculate total automatically whenever fields change
-    useEffect(() => {
-        const total =
-            (newPayment.ativos || 0) +
-            (newPayment.inativos || 0) +
-            (newPayment.alteracao || 0) +
-            (newPayment.distrato || 0) +
-            (newPayment.remissao_gps || 0) +
-            (newPayment.recal_guia || 0) +
-            (newPayment.regularizacao || 0) +
-            (newPayment.outros || 0) +
-            (newPayment.rent_invest_facil || 0) +
-            (newPayment.abertura || 0) +
-            (newPayment.parcelamentos || 0);
-
-        setNewPayment(prev => ({ ...prev, total }));
-    }, [
-        newPayment.ativos, newPayment.inativos, newPayment.alteracao,
-        newPayment.distrato, newPayment.remissao_gps, newPayment.recal_guia,
-        newPayment.regularizacao, newPayment.outros, newPayment.rent_invest_facil,
-        newPayment.abertura, newPayment.parcelamentos
-    ]);
+    // Removed auto-calculation since fields are now text
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -57,27 +36,23 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         // Reset form
         setNewPayment({
             date: new Date().toISOString().split('T')[0],
-            ativos: 0,
-            inativos: 0,
-            alteracao: 0,
-            distrato: 0,
-            remissao_gps: 0,
-            recal_guia: 0,
-            regularizacao: 0,
-            outros: 0,
-            rent_invest_facil: 0,
-            abertura: 0,
-            parcelamentos: 0,
-            total: 0
+            ativos: '',
+            inativos: '',
+            alteracao: '',
+            distrato: '',
+            remissao_gps: '',
+            recal_guia: '',
+            regularizacao: '',
+            outros: '',
+            rent_invest_facil: '',
+            abertura: '',
+            parcelamentos: '',
+            total: ''
         });
     };
 
     const handleInputChange = (field: keyof Omit<DailyPayment, 'id' | 'created_at'>, value: string) => {
-        if (field === 'date') {
-            setNewPayment(prev => ({ ...prev, [field]: value }));
-        } else {
-            setNewPayment(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
-        }
+        setNewPayment(prev => ({ ...prev, [field]: value }));
     };
 
     return (
@@ -134,19 +109,19 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                                         <td className="px-4 py-3 text-sm font-semibold text-slate-900 sticky left-0 bg-white group-hover:bg-slate-50">
                                             {new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.ativos)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.inativos)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.alteracao)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.distrato)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.remissao_gps)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.recal_guia)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.regularizacao)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.rent_invest_facil)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.abertura)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.parcelamentos)}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{formatCurrency(p.outros)}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.ativos}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.inativos}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.alteracao}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.distrato}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.remissao_gps}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.recal_guia}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.regularizacao}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.rent_invest_facil}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.abertura}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.parcelamentos}</td>
+                                        <td className="px-4 py-3 text-xs text-slate-600">{p.outros}</td>
                                         <td className="px-4 py-3 text-xs font-bold text-emerald-600 sticky right-0 bg-white group-hover:bg-slate-50">
-                                            {formatCurrency(p.total)}
+                                            {p.total}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <button
@@ -188,28 +163,24 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                                 </div>
 
                                 {Object.keys(newPayment).map((key) => {
-                                    if (key === 'date' || key === 'total') return null;
+                                    if (key === 'date') return null;
                                     const label = key.replace(/_/g, ' ').toUpperCase();
                                     return (
                                         <div key={key}>
-                                            <label className="block text-xs font-black text-slate-500 uppercase mb-1">{label}</label>
+                                            <label className="block text-xs font-black text-slate-500 uppercase mb-1 whitespace-nowrap overflow-hidden text-ellipsis">{label}</label>
                                             <input
                                                 className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20"
-                                                type="number"
-                                                step="0.01"
+                                                type="text"
+                                                placeholder="Insira valor/texto"
                                                 value={(newPayment as any)[key]}
                                                 onChange={e => handleInputChange(key as any, e.target.value)}
-                                                onFocus={e => e.target.select()}
                                             />
                                         </div>
                                     );
                                 })}
                             </div>
 
-                            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                                <div className="text-xl font-bold text-slate-700">
-                                    Total: <span className="text-emerald-600">{formatCurrency(newPayment.total)}</span>
-                                </div>
+                            <div className="flex items-center justify-end pt-4 border-t border-slate-100">
                                 <button
                                     type="submit"
                                     className="px-8 py-3 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
