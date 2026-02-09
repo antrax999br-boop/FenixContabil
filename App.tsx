@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, Payable, CalendarEvent, AppState,
-  UserProfile, InvoiceStatus
+  UserProfile, InvoiceStatus, DailyPayment
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +12,7 @@ import PayablesPage from './pages/Payables';
 import CalendarPage from './pages/Calendar';
 import SettingsPage from './pages/Settings';
 import ReportsPage from './pages/Reports';
+import DailyPaymentsPage from './pages/DailyPayments';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
@@ -28,6 +29,7 @@ const App: React.FC = () => {
     clients: [],
     invoices: [],
     payables: [],
+    dailyPayments: [],
     events: [],
     loading: true
   });
@@ -59,7 +61,7 @@ const App: React.FC = () => {
         setState(prev => ({
           ...prev,
           currentUser: null,
-          users: [], clients: [], invoices: [], payables: [], events: [],
+          users: [], clients: [], invoices: [], payables: [], dailyPayments: [], events: [],
           loading: false
         }));
       }
@@ -79,11 +81,12 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes, payablesRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes] = await Promise.all([
         supabase.from('clients').select('*'),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
-        supabase.from('payables').select('*')
+        supabase.from('payables').select('*'),
+        supabase.from('daily_payments').select('*').order('date', { ascending: false })
       ]);
 
       if (profile) {
@@ -130,6 +133,7 @@ const App: React.FC = () => {
           clients: clients,
           invoices: invoices,
           payables: payables,
+          dailyPayments: (dailyPaymentsRes.data || []) as DailyPayment[],
           events: events,
           loading: false
         }));
@@ -510,6 +514,34 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, payables: updated }));
   };
 
+  const addDailyPayment = async (payment: Omit<DailyPayment, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase
+      .from('daily_payments')
+      .insert([payment])
+      .select()
+      .single();
+
+    if (data && !error) {
+      setState(prev => ({ ...prev, dailyPayments: [data, ...prev.dailyPayments] }));
+    } else {
+      console.error(error);
+      alert('Erro ao adicionar pagamento diário.');
+    }
+  };
+
+  const deleteDailyPayment = async (id: string) => {
+    const { error } = await supabase.from('daily_payments').delete().eq('id', id);
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        dailyPayments: prev.dailyPayments.filter(p => p.id !== id)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao excluir pagamento diário.');
+    }
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -527,6 +559,7 @@ const App: React.FC = () => {
       case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
       case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="INTERNET" />;
       case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={markPayablePaid} onDelete={deletePayable} />;
+      case 'pagamentos-diarios': return <DailyPaymentsPage dailyPayments={state.dailyPayments} onAdd={addDailyPayment} onDelete={deleteDailyPayment} />;
       case 'relatorios': return <ReportsPage state={state} />;
       case 'calendario':
         return <CalendarPage

@@ -61,11 +61,30 @@ export interface Payable {
   created_at?: string;
 }
 
+export interface DailyPayment {
+  id: string; // UUID
+  date: string; // YYYY-MM-DD
+  ativos: number;
+  inativos: number;
+  alteracao: number;
+  distrato: number;
+  remissao_gps: number;
+  recal_guia: number;
+  regularizacao: number;
+  outros: number;
+  rent_invest_facil: number;
+  abertura: number;
+  parcelamentos: number;
+  total: number;
+  created_at?: string;
+}
+
 export interface AppState {
   users: User[];
   clients: Client[];
   invoices: Invoice[];
   payables: Payable[];
+  dailyPayments: DailyPayment[];
   events: CalendarEvent[];
   currentUser: User | null;
   loading: boolean;

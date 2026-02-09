@@ -71,3 +71,25 @@ CREATE POLICY "Acesso público clients" ON public.clients FOR ALL USING (true) W
 CREATE POLICY "Acesso público invoices" ON public.invoices FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso público payables" ON public.payables FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Acesso público calendar_events" ON public.calendar_events FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. Tabela de Pagamentos Diários
+CREATE TABLE IF NOT EXISTS public.daily_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    date DATE NOT NULL,
+    ativos NUMERIC(15,2) DEFAULT 0,
+    inativos NUMERIC(15,2) DEFAULT 0,
+    alteracao NUMERIC(15,2) DEFAULT 0,
+    distrato NUMERIC(15,2) DEFAULT 0,
+    remissao_gps NUMERIC(15,2) DEFAULT 0,
+    recal_guia NUMERIC(15,2) DEFAULT 0,
+    regularizacao NUMERIC(15,2) DEFAULT 0,
+    outros NUMERIC(15,2) DEFAULT 0,
+    rent_invest_facil NUMERIC(15,2) DEFAULT 0,
+    abertura NUMERIC(15,2) DEFAULT 0,
+    parcelamentos NUMERIC(15,2) DEFAULT 0,
+    total NUMERIC(15,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.daily_payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Acesso público daily_payments" ON public.daily_payments FOR ALL USING (true) WITH CHECK (true);
