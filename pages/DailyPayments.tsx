@@ -35,6 +35,7 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [newPayment, setNewPayment] = useState<Omit<DailyPayment, 'id' | 'created_at'>>({
         date: new Date().toISOString().split('T')[0],
+        description: '',
         ativos: '', inativos: '', alteracao: '', distrato: '',
         remissao_gps: '', recal_guia: '', regularizacao: '',
         rent_invest_facil: '', abertura: '', parcelamentos: '', outros: ''
@@ -68,6 +69,7 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         setEditingPayment(null);
         setNewPayment({
             date: new Date().toISOString().split('T')[0],
+            description: '',
             ativos: '', inativos: '', alteracao: '', distrato: '',
             remissao_gps: '', recal_guia: '', regularizacao: '',
             rent_invest_facil: '', abertura: '', parcelamentos: '', outros: ''
@@ -152,6 +154,7 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50/50">
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Data / Dia</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Nome do Item / Descrição</th>
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Itens Lançados</th>
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Total do Dia</th>
                                 <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">Ações</th>
@@ -160,7 +163,7 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                         <tbody className="divide-y divide-slate-100">
                             {filteredPayments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-medium">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">
                                         Nenhum lançamento encontrado para este mês.
                                     </td>
                                 </tr>
@@ -170,6 +173,9 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                                         <td className="px-6 py-4 align-top">
                                             <div className="text-sm font-bold text-slate-700">{new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}</div>
                                             <div className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">{getDayOfWeek(p.date)}</div>
+                                        </td>
+                                        <td className="px-6 py-4 align-top">
+                                            <div className="text-sm font-medium text-slate-900">{p.description || '-'}</div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-2 max-w-2xl">
@@ -231,18 +237,30 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                         </div>
 
                         <div className="p-8 max-h-[80vh] overflow-y-auto">
-                            <div className="mb-6 flex items-end justify-between">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data</label>
-                                    <input
-                                        required
-                                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
-                                        type="date"
-                                        value={currentForm.date}
-                                        onChange={e => handleInputChange('date', e.target.value)}
-                                    />
+                            <div className="mb-6 grid grid-cols-2 gap-4 items-end">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Data</label>
+                                        <input
+                                            required
+                                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
+                                            type="date"
+                                            value={currentForm.date}
+                                            onChange={e => handleInputChange('date', e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Nome do Item / Descrição</label>
+                                        <input
+                                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
+                                            type="text"
+                                            placeholder="Ex: Hunter, Pago em dinheiro, etc"
+                                            value={currentForm.description}
+                                            onChange={e => handleInputChange('description', e.target.value)}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right pb-2">
                                     <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total do Lançamento</span>
                                     <span className="text-2xl font-black text-blue-600">{formatCurrency(calculateRowTotal(currentForm))}</span>
                                 </div>
