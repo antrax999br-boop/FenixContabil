@@ -36,7 +36,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
   const filteredInvoices = state.invoices.filter(i => {
     const client = state.clients.find(c => c.id === i.client_id);
 
-    const isInternet = i.invoice_number?.startsWith('INT-');
+    const isInternet = i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id);
     const isSemNota = !isInternet && (!i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
     const isStandard = !isInternet && !isSemNota;
 
@@ -62,13 +62,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     const clientName = client?.name || i.individual_name || '';
     const matchesSearch = searchTerm === '' ||
       clientName.toLowerCase().includes(searchLower) ||
-      i.invoice_number?.toLowerCase().includes(searchLower);
+      (i.invoice_number || '').toLowerCase().includes(searchLower);
 
     return matchesStatus && matchesMonth && matchesYear && matchesSearch;
   }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
   const groupedInvoices = filteredInvoices.reduce((acc, inv) => {
-    const month = new Date(inv.due_date + 'T12:00:00').getMonth();
+    // Safer month extraction from YYYY-MM-DD string
+    const month = parseInt(inv.due_date.split('-')[1]) - 1;
     if (!acc[month]) acc[month] = [];
     acc[month].push(inv);
     return acc;
@@ -256,7 +257,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   )}
                   {groupedInvoices[monthIdx].map(inv => {
                     const client = state.clients.find(c => c.id === inv.client_id);
-                    const isInternet = inv.invoice_number?.startsWith('INT-');
+                    const isInternet = inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id);
                     const isSemNota = !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
                     const isStandard = !isInternet && !isSemNota;
 

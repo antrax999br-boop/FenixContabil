@@ -83,7 +83,10 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(12);
         doc.text(`Período: ${monthName.charAt(0).toUpperCase() + monthName.slice(1)} de ${year}`, 14, 30);
-        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 140, 30);
+
+        // Right-aligned header info to prevent cutoff
+        doc.setFontSize(10);
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
 
         // Summary Box
         doc.setDrawColor(230);
@@ -107,10 +110,22 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
         // Table
         const tableData = filteredInvoices.map(inv => {
             const client = state.clients.find(c => c.id === inv.client_id);
+
+            // Logic to determine type (same as Invoices.tsx)
+            const isInternet = inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id);
+            const isSemNota = !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
+
+            let labelPrefix = 'BOLETO ATIVO';
+            if (isInternet) labelPrefix = 'INTERNET';
+            else if (isSemNota) labelPrefix = 'SEM NOTA';
+
+            const displayNum = inv.invoice_number && inv.invoice_number !== 'S/N' ? inv.invoice_number : '';
+            const finalId = `${labelPrefix}${displayNum ? ' - ' + displayNum : ''}`;
+
             return [
-                inv.invoice_number || 'N/A',
-                client?.name || 'Desconhecido',
-                inv.due_date,
+                finalId,
+                client?.name || inv.individual_name || 'Desconhecido',
+                new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
                 formatCurrency(inv.final_value),
                 inv.status === InvoiceStatus.PAID ? 'PAGO' : inv.status === InvoiceStatus.OVERDUE ? 'ATRASADO' : 'PENDENTE'
             ];
