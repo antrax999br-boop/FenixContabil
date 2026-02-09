@@ -13,6 +13,9 @@ interface InvoicesPageProps {
 const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDelete }) => {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [monthFilter, setMonthFilter] = useState<number | 'ALL'>('ALL');
+  const [yearFilter, setYearFilter] = useState<number | 'ALL'>(new Date().getFullYear());
   const [newInvoice, setNewInvoice] = useState({
     invoice_number: '',
     client_id: '',
@@ -20,7 +23,39 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     due_date: new Date().toISOString().split('T')[0]
   });
 
-  const filteredInvoices = state.invoices.filter(i => filter === 'ALL' || i.status === filter);
+  const months = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear - 1, currentYear, currentYear + 1];
+
+  const filteredInvoices = state.invoices.filter(i => {
+    const client = state.clients.find(c => c.id === i.client_id);
+    const matchesStatus = filter === 'ALL' || i.status === filter;
+
+    const invoiceDate = new Date(i.due_date + 'T12:00:00'); // Add time to avoid TZ issues
+    const matchesMonth = monthFilter === 'ALL' || invoiceDate.getMonth() === monthFilter;
+    const matchesYear = yearFilter === 'ALL' || invoiceDate.getFullYear() === yearFilter;
+
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = searchTerm === '' ||
+      client?.name.toLowerCase().includes(searchLower) ||
+      i.invoice_number?.toLowerCase().includes(searchLower);
+
+    return matchesStatus && matchesMonth && matchesYear && matchesSearch;
+  }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+
+  // Grouping logic
+  const groupedInvoices = filteredInvoices.reduce((acc, inv) => {
+    const month = new Date(inv.due_date + 'T12:00:00').getMonth();
+    if (!acc[month]) acc[month] = [];
+    acc[month].push(inv);
+    return acc;
+  }, {} as Record<number, Invoice[]>);
+
+  const sortedMonthKeys = Object.keys(groupedInvoices).map(Number).sort((a, b) => a - b);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,24 +93,51 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
 
       <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-sm">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
             <input
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
               placeholder="Buscar por cliente ou ID do boleto..."
               type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <select
-            className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
-            value={filter}
-            onChange={e => setFilter(e.target.value as any)}
-          >
-            <option value="ALL">Todos os Status</option>
-            <option value={InvoiceStatus.PAID}>Pago</option>
-            <option value={InvoiceStatus.NOT_PAID}>Pendente</option>
-            <option value={InvoiceStatus.OVERDUE}>Atrasado</option>
-          </select>
+
+          <div className="flex items-center gap-2">
+            <select
+              className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
+              value={monthFilter}
+              onChange={e => setMonthFilter(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value))}
+            >
+              <option value="ALL">Todo o Ano</option>
+              {months.map((m, idx) => (
+                <option key={m} value={idx}>{m}</option>
+              ))}
+            </select>
+
+            <select
+              className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
+              value={yearFilter}
+              onChange={e => setYearFilter(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value))}
+            >
+              <option value="ALL">Todos os Anos</option>
+              {years.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+
+            <select
+              className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
+              value={filter}
+              onChange={e => setFilter(e.target.value as any)}
+            >
+              <option value="ALL">Todos os Status</option>
+              <option value={InvoiceStatus.PAID}>Pago</option>
+              <option value={InvoiceStatus.NOT_PAID}>Pendente</option>
+              <option value={InvoiceStatus.OVERDUE}>Atrasado</option>
+            </select>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <span>Mostrando {filteredInvoices.length} de {state.invoices.length}</span>
@@ -96,59 +158,80 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredInvoices.map(inv => {
-                const client = state.clients.find(c => c.id === inv.client_id);
-                return (
-                  <tr key={inv.id} className="hover:bg-primary/5 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
-                          {client?.name.substring(0, 2) || '??'}
+              {sortedMonthKeys.map(monthIdx => (
+                <React.Fragment key={monthIdx}>
+                  {monthFilter === 'ALL' && (
+                    <tr className="bg-slate-100/50">
+                      <td colSpan={6} className="px-6 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
+                          <span className="text-xs font-black text-slate-700 uppercase tracking-widest">
+                            {months[monthIdx]}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400 ml-auto">
+                            {groupedInvoices[monthIdx].length} {groupedInvoices[monthIdx].length === 1 ? 'Boleto' : 'Boletos'}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{client?.name}</p>
-                          <p className="text-xs text-slate-500">ID: {inv.invoice_number}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{formatCurrency(inv.original_value)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{inv.due_date}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${inv.status === InvoiceStatus.PAID ? 'bg-emerald-100 text-emerald-700' :
-                          inv.status === InvoiceStatus.OVERDUE ? 'bg-rose-100 text-rose-700' :
-                            'bg-amber-100 text-amber-700'
-                        }`}>
-                        <span className={`size-1.5 rounded-full ${inv.status === InvoiceStatus.PAID ? 'bg-emerald-500' :
-                            inv.status === InvoiceStatus.OVERDUE ? 'bg-rose-500' :
-                              'bg-amber-500'
-                          }`} />
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">{formatCurrency(inv.final_value)}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {inv.status !== InvoiceStatus.PAID && (
-                          <button
-                            onClick={() => onPay(inv.id)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Marcar como Pago"
-                          >
-                            <span className="material-symbols-outlined text-lg">check_circle</span>
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onDelete(inv.id)}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Excluir"
-                        >
-                          <span className="material-symbols-outlined text-lg">delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                    </tr>
+                  )}
+                  {groupedInvoices[monthIdx].map(inv => {
+                    const client = state.clients.find(c => c.id === inv.client_id);
+                    return (
+                      <tr key={inv.id} className="hover:bg-primary/5 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                              {client?.name.substring(0, 2) || '??'}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">{client?.name}</p>
+                              <p className="text-xs text-slate-500">ID: {inv.invoice_number}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{formatCurrency(inv.original_value)}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${inv.status === InvoiceStatus.PAID ? 'bg-emerald-100 text-emerald-700' :
+                            inv.status === InvoiceStatus.OVERDUE ? 'bg-rose-100 text-rose-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                            <span className={`size-1.5 rounded-full ${inv.status === InvoiceStatus.PAID ? 'bg-emerald-500' :
+                              inv.status === InvoiceStatus.OVERDUE ? 'bg-rose-500' :
+                                'bg-amber-500'
+                              }`} />
+                            {inv.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">{formatCurrency(inv.final_value)}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {inv.status !== InvoiceStatus.PAID && (
+                              <button
+                                onClick={() => onPay(inv.id)}
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                title="Marcar como Pago"
+                              >
+                                <span className="material-symbols-outlined text-lg">check_circle</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => onDelete(inv.id)}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Excluir"
+                            >
+                              <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
             </tbody>
           </table>
         </div>
