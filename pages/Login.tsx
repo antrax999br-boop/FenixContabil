@@ -19,24 +19,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background-light">
       <div className="mb-8 flex flex-col items-center text-center">
-        <div className="w-full max-w-md mb-8 flex items-center justify-center gap-6">
-          <div className="h-28 w-52 overflow-hidden flex items-center justify-center">
+        <div className="w-full max-w-md mb-8 flex items-center justify-center">
+          <div className="h-32 w-auto overflow-hidden flex items-center justify-center">
             <img
               src={fenixLogo}
-              alt="Fenix Logo Parte 1"
-              className="h-56 w-auto max-w-none object-contain drop-shadow-2xl"
-              style={{ objectPosition: 'top' }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
-              }}
-            />
-          </div>
-          <div className="h-24 w-36 overflow-hidden flex items-center justify-center border-l border-slate-200 pl-6">
-            <img
-              src={fenixLogo}
-              alt="Fenix Logo Parte 2"
-              className="h-48 w-auto max-w-none object-contain drop-shadow-2xl"
-              style={{ objectPosition: 'bottom' }}
+              alt="Fenix Contábil"
+              className="h-full w-auto object-contain drop-shadow-2xl"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
               }}
