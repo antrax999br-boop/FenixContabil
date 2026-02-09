@@ -165,10 +165,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cliente</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Valor Original</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Vencimento</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ativo</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">S/ Nota</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Internet</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Boletos Ativos</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Boletos S/ Nota</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Boletos Internet</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Valor Final</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ações</th>
               </tr>
@@ -210,35 +209,23 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                         <td className="px-6 py-4 text-sm text-slate-600">
                           {new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase ${inv.status === InvoiceStatus.PAID ? 'bg-emerald-100 text-emerald-700' :
-                            inv.status === InvoiceStatus.OVERDUE ? 'bg-rose-100 text-rose-700' :
-                              'bg-amber-100 text-amber-700'
-                            }`}>
-                            <span className={`size-1.5 rounded-full ${inv.status === InvoiceStatus.PAID ? 'bg-emerald-500' :
-                              inv.status === InvoiceStatus.OVERDUE ? 'bg-rose-500' :
-                                'bg-amber-500'
-                              }`} />
-                            {inv.status}
-                          </span>
-                        </td>
                         <td className="px-6 py-4 text-center">
                           {inv.status !== InvoiceStatus.PAID ? (
-                            <span className="material-symbols-outlined text-orange-500 text-lg" title="Ativo">local_fire_department</span>
+                            <span className="material-symbols-outlined text-orange-500 text-lg" title="Boletos Ativos">local_fire_department</span>
                           ) : (
                             <span className="text-slate-300">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {(!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') ? (
-                            <span className="material-symbols-outlined text-amber-500 text-lg" title="Sem Nota">description_off</span>
+                            <span className="material-symbols-outlined text-amber-500 text-lg" title="Boletos Sem Nota">note_stack_off</span>
                           ) : (
                             <span className="text-slate-300">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {(inv.invoice_number && inv.invoice_number.trim() !== '' && inv.invoice_number.toUpperCase() !== 'S/N' && inv.invoice_number.toUpperCase() !== 'S/AN') ? (
-                            <span className="material-symbols-outlined text-blue-500 text-lg" title="Internet">language</span>
+                            <span className="material-symbols-outlined text-blue-500 text-lg" title="Boletos Internet">public</span>
                           ) : (
                             <span className="text-slate-300">-</span>
                           )}

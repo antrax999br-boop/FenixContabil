@@ -18,9 +18,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
   const menuItems: MenuItem[] = [
     { id: 'inicio', label: 'Início', icon: 'dashboard' },
     { id: 'notas', label: 'Boletos', icon: 'receipt_long' },
-    { id: 'notas-ativas', label: 'Ativos', icon: 'local_fire_department' },
-    { id: 'notas-sem-nota', label: 'Sem Nota', icon: 'assignment_late' },
-    { id: 'notas-internet', label: 'Via Internet', icon: 'language' },
+    { id: 'notas-ativas', label: 'Boletos Ativos', icon: 'local_fire_department' },
+    { id: 'notas-sem-nota', label: 'Boletos Sem Nota', icon: 'note_stack_off' },
+    { id: 'notas-internet', label: 'Boletos Pela Internet', icon: 'public' },
     { id: 'clientes', label: 'Clientes', icon: 'group' },
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
   ];
@@ -63,8 +63,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
               : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
           >
-            <span className={`material-symbols-outlined ${item.sub ? 'text-[18px]' : 'text-[22px]'}`}>{item.icon}</span>
-            <span className={`${item.sub ? 'text-xs' : 'text-sm'} font-medium whitespace-nowrap`}>{item.label}</span>
+            <span className={`material-symbols-outlined flex-shrink-0 ${item.sub ? 'text-[18px]' : 'text-[20px]'}`}>{item.icon}</span>
+            <span className={`${item.sub ? 'text-xs' : 'text-[13px]'} font-semibold whitespace-nowrap overflow-hidden text-ellipsis`}>{item.label}</span>
           </button>
         ))}
 
