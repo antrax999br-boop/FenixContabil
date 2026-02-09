@@ -57,7 +57,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${item.sub ? 'pl-9 py-2 text-sm opacity-90 bg-black/10' : ''} ${activeTab === item.id
+            style={item.sub ? { paddingLeft: '2.5rem', backgroundColor: 'rgba(0,0,0,0.2)' } : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${item.sub ? 'py-1.5 text-sm opacity-90' : ''} ${activeTab === item.id
               ? 'bg-white/10 text-white shadow-sm'
               : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
