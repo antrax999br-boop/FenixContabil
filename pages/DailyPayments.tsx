@@ -294,10 +294,11 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                                 <button
                                     type="button"
                                     onClick={() => {
+                                        const total = String(calculateRowTotal(currentForm));
                                         if (editingPayment) {
-                                            onUpdate(editingPayment);
+                                            onUpdate({ ...editingPayment, total });
                                         } else {
-                                            onAdd(newPayment);
+                                            onAdd({ ...newPayment, total });
                                         }
                                         handleCloseModal();
                                     }}
