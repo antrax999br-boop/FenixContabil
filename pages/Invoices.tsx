@@ -21,7 +21,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     invoice_number: '',
     client_id: '',
     individual_name: '',
-    original_value: 0,
+    original_value: '',
     due_date: new Date().toISOString().split('T')[0]
   });
 
@@ -97,10 +97,11 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
 
     onAdd({
       ...newInvoice,
+      original_value: parseFloat(newInvoice.original_value) || 0,
       invoice_number: finalNumber
     });
 
-    setNewInvoice({ invoice_number: '', client_id: '', individual_name: '', original_value: 0, due_date: new Date().toISOString().split('T')[0] });
+    setNewInvoice({ invoice_number: '', client_id: '', individual_name: '', original_value: '', due_date: new Date().toISOString().split('T')[0] });
     setShowModal(false);
   };
 
@@ -361,9 +362,12 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   {regType === 'INTERNET' ? (
                     <input
                       required
-                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900 placeholder:text-slate-400 font-bold"
+                      type="text"
+                      id="individual_name"
+                      name="individual_name"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400 font-bold"
                       value={newInvoice.individual_name}
-                      onChange={e => setNewInvoice({ ...newInvoice, individual_name: e.target.value })}
+                      onChange={e => setNewInvoice(prev => ({ ...prev, individual_name: e.target.value }))}
                       placeholder="Ex: Hunter (Internet Mensal)"
                     />
                   ) : (
@@ -385,9 +389,12 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                       {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
                     </label>
                     <input
-                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900 placeholder:text-slate-400"
+                      id="invoice_number"
+                      name="invoice_number"
+                      type="text"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400"
                       value={newInvoice.invoice_number}
-                      onChange={e => setNewInvoice({ ...newInvoice, invoice_number: e.target.value })}
+                      onChange={e => setNewInvoice(prev => ({ ...prev, invoice_number: e.target.value }))}
                       placeholder={regType === 'INTERNET' ? 'Ex: INT-2024-001' : 'Ex: NF-2024-001'}
                     />
                   </div>
@@ -397,21 +404,30 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Valor Original (R$)</label>
                   <input
                     required
-                    type="number"
-                    step="0.01"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
+                    id="original_value"
+                    name="original_value"
+                    type="text"
+                    inputMode="decimal"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
                     value={newInvoice.original_value}
-                    onChange={e => setNewInvoice({ ...newInvoice, original_value: parseFloat(e.target.value) })}
+                    onChange={e => {
+                      const val = e.target.value.replace(',', '.');
+                      if (val === '' || !isNaN(Number(val)) || val === '.') {
+                        setNewInvoice(prev => ({ ...prev, original_value: e.target.value }));
+                      }
+                    }}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimento</label>
                   <input
                     required
+                    id="due_date"
+                    name="due_date"
                     type="date"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
                     value={newInvoice.due_date}
-                    onChange={e => setNewInvoice({ ...newInvoice, due_date: e.target.value })}
+                    onChange={e => setNewInvoice(prev => ({ ...prev, due_date: e.target.value }))}
                   />
                 </div>
               </div>
