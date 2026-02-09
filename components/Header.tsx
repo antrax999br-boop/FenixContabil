@@ -16,14 +16,30 @@ const Header: React.FC<HeaderProps> = ({ user, onNotificationsClick, onChatClick
   return (
     <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-20">
       <div className="flex items-center gap-3">
-        <img
-          src="/fenix-logo.png"
-          alt="Fenix Contábil"
-          className="h-8 w-auto object-contain"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
+        <div className="flex items-center gap-2 h-10">
+          <div className="h-10 w-16 overflow-hidden flex items-center justify-center">
+            <img
+              src="/fenix-logo.png"
+              alt="Fenix Logo Parte 1"
+              className="h-20 w-auto max-w-none object-contain"
+              style={{ objectPosition: 'top' }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+          <div className="h-10 w-12 overflow-hidden flex items-center justify-center">
+            <img
+              src="/fenix-logo.png"
+              alt="Fenix Logo Parte 2"
+              className="h-20 w-auto max-w-none object-contain"
+              style={{ objectPosition: 'bottom' }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+        </div>
         <h2 className="text-lg font-bold text-slate-800 sm:block hidden">Fenix Contábil</h2>
       </div>
 

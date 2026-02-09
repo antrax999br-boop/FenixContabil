@@ -22,15 +22,31 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   return (
     <aside className="w-64 bg-brand-navy shrink-0 flex flex-col h-full">
       <div className="p-6">
-        <div className="flex items-center justify-center bg-white/5 rounded-xl p-3 backdrop-blur-sm border border-white/10">
-          <img
-            src={fenixLogo}
-            alt="Fenix Contábil"
-            className="w-full h-auto max-h-12 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
-            }}
-          />
+        <div className="flex items-center justify-center bg-white/5 rounded-xl p-2.5 backdrop-blur-sm border border-white/10 overflow-hidden">
+          <div className="flex items-center gap-1.5 h-14">
+            <div className="h-14 w-28 overflow-hidden flex items-center justify-center">
+              <img
+                src={fenixLogo}
+                alt="Fenix Logo Parte 1"
+                className="h-28 w-auto max-w-none object-contain"
+                style={{ objectPosition: 'top' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
+                }}
+              />
+            </div>
+            <div className="h-14 w-20 overflow-hidden flex items-center justify-center border-l border-white/10 pl-1.5">
+              <img
+                src={fenixLogo}
+                alt="Fenix Logo Parte 2"
+                className="h-28 w-auto max-w-none object-contain"
+                style={{ objectPosition: 'bottom' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
+                }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
