@@ -35,17 +35,23 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
   const filteredInvoices = state.invoices.filter(i => {
     const client = state.clients.find(c => c.id === i.client_id);
 
-    let matchesStatus = filter === 'ALL' || i.status === filter;
-    if (filter === 'ATIVOS') {
+    const isSemNota = !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN';
+    const isInternet = i.invoice_number?.startsWith('INT-');
+
+    let matchesStatus = false;
+    if (filter === 'ALL') {
+      matchesStatus = !isSemNota && !isInternet;
+    } else if (filter === 'ATIVOS') {
       matchesStatus = i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE;
     } else if (filter === 'SEM_NOTA') {
-      matchesStatus = !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN';
+      matchesStatus = isSemNota;
     } else if (filter === 'INTERNET') {
-      const isSemNota = !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN';
-      matchesStatus = !isSemNota;
+      matchesStatus = isInternet;
+    } else {
+      matchesStatus = i.status === filter;
     }
 
-    const invoiceDate = new Date(i.due_date + 'T12:00:00'); // Add time to avoid TZ issues
+    const invoiceDate = new Date(i.due_date + 'T12:00:00');
     const matchesMonth = monthFilter === 'ALL' || invoiceDate.getMonth() === monthFilter;
     const matchesYear = yearFilter === 'ALL' || invoiceDate.getFullYear() === yearFilter;
 
@@ -57,7 +63,6 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     return matchesStatus && matchesMonth && matchesYear && matchesSearch;
   }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
-  // Grouping logic
   const groupedInvoices = filteredInvoices.reduce((acc, inv) => {
     const month = new Date(inv.due_date + 'T12:00:00').getMonth();
     if (!acc[month]) acc[month] = [];
@@ -67,12 +72,38 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
 
   const sortedMonthKeys = Object.keys(groupedInvoices).map(Number).sort((a, b) => a - b);
 
+  const getDefaultType = () => {
+    if (filter === 'INTERNET') return 'INTERNET';
+    if (filter === 'SEM_NOTA') return 'SEM_NOTA';
+    return 'STANDARD';
+  };
+
+  const [regType, setRegType] = useState<'STANDARD' | 'INTERNET' | 'SEM_NOTA'>(getDefaultType());
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newInvoice.client_id) return alert('Selecione um cliente');
-    onAdd(newInvoice);
+
+    let finalNumber = newInvoice.invoice_number;
+    if (regType === 'SEM_NOTA') finalNumber = 'S/N';
+    else if (regType === 'INTERNET' && !finalNumber.startsWith('INT-')) {
+      finalNumber = 'INT-' + (finalNumber || 'AUTOGEN');
+    }
+
+    onAdd({
+      ...newInvoice,
+      invoice_number: finalNumber
+    });
+
     setNewInvoice({ invoice_number: '', client_id: '', original_value: 0, due_date: new Date().toISOString().split('T')[0] });
     setShowModal(false);
+  };
+
+  // Helper to get display number (hide technical prefixes)
+  const getDisplayNumber = (num?: string) => {
+    if (!num) return 'S/N';
+    if (num.startsWith('INT-')) return num.replace('INT-', '');
+    return num;
   };
 
   return (
@@ -92,7 +123,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
             Exportar Dados
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setRegType(getDefaultType());
+              setShowModal(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-primary/20"
           >
             <span className="material-symbols-outlined text-sm">add</span>
@@ -101,6 +135,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
         </div>
       </div>
 
+      {/* ... filter section remains same but update current display ... */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
           <div className="relative flex-1 max-w-sm">
@@ -142,10 +177,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
               value={filter}
               onChange={e => setFilter(e.target.value as any)}
             >
-              <option value="ALL">Todos os Status</option>
+              <option value="ALL">📋 Todos os Registros</option>
               <option value="ATIVOS">🔥 Apenas Ativos</option>
-              <option value="SEM_NOTA">📄 Sem Nota Fiscal</option>
-              <option value="INTERNET">🌐 Pela Internet</option>
+              <option value="SEM_NOTA">📄 Boletos Sem Nota</option>
+              <option value="INTERNET">🌐 Boletos Internet</option>
               <option value={InvoiceStatus.PAID}>Pago</option>
               <option value={InvoiceStatus.NOT_PAID}>Pendente</option>
               <option value={InvoiceStatus.OVERDUE}>Atrasado</option>
@@ -177,7 +212,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                 <React.Fragment key={monthIdx}>
                   {monthFilter === 'ALL' && (
                     <tr className="bg-slate-100/50">
-                      <td colSpan={6} className="px-6 py-2.5">
+                      <td colSpan={8} className="px-6 py-2.5">
                         <div className="flex items-center gap-2">
                           <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
                           <span className="text-xs font-black text-slate-700 uppercase tracking-widest">
@@ -192,6 +227,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   )}
                   {groupedInvoices[monthIdx].map(inv => {
                     const client = state.clients.find(c => c.id === inv.client_id);
+                    const isSemNota = !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN';
+                    const isInternet = inv.invoice_number?.startsWith('INT-');
+
                     return (
                       <tr key={inv.id} className="hover:bg-primary/5 transition-colors group">
                         <td className="px-6 py-4">
@@ -201,7 +239,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-slate-900">{client?.name}</p>
-                              <p className="text-xs text-slate-500">ID: {inv.invoice_number}</p>
+                              <p className="text-xs text-slate-500">ID: {getDisplayNumber(inv.invoice_number)}</p>
                             </div>
                           </div>
                         </td>
@@ -217,14 +255,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {(!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') ? (
+                          {isSemNota ? (
                             <span className="material-symbols-outlined text-amber-500 text-lg" title="Boletos Sem Nota">note_stack_off</span>
                           ) : (
                             <span className="text-slate-300">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {(inv.invoice_number && inv.invoice_number.trim() !== '' && inv.invoice_number.toUpperCase() !== 'S/N' && inv.invoice_number.toUpperCase() !== 'S/AN') ? (
+                          {isInternet ? (
                             <span className="material-symbols-outlined text-blue-500 text-lg" title="Boletos Internet">public</span>
                           ) : (
                             <span className="text-slate-300">-</span>
@@ -265,35 +303,67 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-lg text-slate-800">Novo Boleto</h3>
+              <h3 className="font-bold text-lg text-slate-800">Novo Registro de Boleto</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente</label>
-                <select
-                  required
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
-                  value={newInvoice.client_id}
-                  onChange={e => setNewInvoice({ ...newInvoice, client_id: e.target.value })}
-                >
-                  <option value="" className="text-slate-400">Selecione um cliente...</option>
-                  {state.clients.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Número do Boleto</label>
-                <input
-                  required
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900 placeholder:text-slate-400"
-                  value={newInvoice.invoice_number}
-                  onChange={e => setNewInvoice({ ...newInvoice, invoice_number: e.target.value })}
-                  placeholder="Ex: NF-2024-001"
-                />
-              </div>
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Tipo de Registro</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRegType('STANDARD')}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${regType === 'STANDARD' ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                    >
+                      Boleto Inicial
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegType('INTERNET')}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${regType === 'INTERNET' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                    >
+                      Internet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegType('SEM_NOTA')}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${regType === 'SEM_NOTA' ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                    >
+                      Sem Nota
+                    </button>
+                  </div>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente</label>
+                  <select
+                    required
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
+                    value={newInvoice.client_id}
+                    onChange={e => setNewInvoice({ ...newInvoice, client_id: e.target.value })}
+                  >
+                    <option value="" className="text-slate-400">Selecione um cliente...</option>
+                    {state.clients.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
+                  </select>
+                </div>
+
+                {regType !== 'SEM_NOTA' && (
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
+                    </label>
+                    <input
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900 placeholder:text-slate-400"
+                      value={newInvoice.invoice_number}
+                      onChange={e => setNewInvoice({ ...newInvoice, invoice_number: e.target.value })}
+                      placeholder={regType === 'INTERNET' ? 'Ex: INT-2024-001' : 'Ex: NF-2024-001'}
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Valor Original (R$)</label>
                   <input
@@ -328,7 +398,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   type="submit"
                   className="flex-1 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20"
                 >
-                  Gerar Boleto
+                  Cadastrar Registro
                 </button>
               </div>
             </form>
