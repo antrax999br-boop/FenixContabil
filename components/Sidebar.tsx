@@ -26,11 +26,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
   ];
 
-  const allowedCalendarEmails = ['laercio@laercio.com.br', 'eliane@fenix.com.br'];
-  const hasCalendarAccess = allowedCalendarEmails.includes(currentUserEmail || '');
+  const adminEmails = ['laercio@laercio.com.br', 'eliane@fenix.com.br'];
+  const isAdmin = adminEmails.includes(currentUserEmail || '');
 
-  if (hasCalendarAccess) {
-    menuItems.push({ id: 'calendario', label: 'Calendário', icon: 'calendar_today' });
+  // Tabs that only admin (Laercio/Eliane) can see
+  const restrictedTabs = ['notas', 'notas-internet', 'contas-pagar', 'relatorios'];
+
+  const filteredMenuItems = menuItems.filter(item => {
+    if (restrictedTabs.includes(item.id)) {
+      return isAdmin;
+    }
+    return true;
+  });
+
+  if (isAdmin) {
+    filteredMenuItems.push({ id: 'calendario', label: 'Calendário', icon: 'calendar_today' });
   }
 
   // Logo Fenix (Versão otimizada para o sistema)
@@ -54,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
-        {menuItems.map(item => (
+        {filteredMenuItems.map(item => (
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
@@ -71,15 +81,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
 
       </nav>
 
-      <div className="p-4 border-t border-white/10">
-        <button
-          onClick={() => onTabChange('notas')}
-          className="w-full bg-brand-orange hover:bg-orange-600 transition-colors text-white py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-brand-orange/20"
-        >
-          <span className="material-symbols-outlined text-base">add_circle</span>
-          Novo Boleto
-        </button>
-      </div>
+      {isAdmin && (
+        <div className="p-4 border-t border-white/10">
+          <button
+            onClick={() => onTabChange('notas')}
+            className="w-full bg-brand-orange hover:bg-orange-600 transition-colors text-white py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-brand-orange/20"
+          >
+            <span className="material-symbols-outlined text-base">add_circle</span>
+            Novo Boleto
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

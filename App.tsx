@@ -79,15 +79,26 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes] = await Promise.all([
         supabase.from('clients').select('*'),
         supabase.from('invoices').select('*'),
-        supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)')
+        supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
+        supabase.from('payables').select('*')
       ]);
 
       if (profile) {
         let invoices = (invoicesRes.data || []) as Invoice[];
         const clients = (clientsRes.data || []) as Client[];
+
+        // Handle Payables with Fallback
+        let payables: Payable[] = [];
+        if (payablesRes.error) {
+          console.warn('Payables table not found in Supabase, using localStorage:', payablesRes.error);
+          const localPayables = localStorage.getItem('fenix_payables');
+          payables = localPayables ? JSON.parse(localPayables) : [];
+        } else {
+          payables = (payablesRes.data || []) as Payable[];
+        }
 
         // Calculate current status for invoices
         invoices = invoices.map(inv => {
@@ -103,18 +114,6 @@ const App: React.FC = () => {
           time: e.event_time,
           created_by: e.profiles?.name || 'Unknown'
         }));
-
-        // Fetch Payables with Fallback
-        let payablesRes = await supabase.from('payables').select('*');
-        let payables: Payable[] = [];
-
-        if (payablesRes.error) {
-          console.warn('Payables table not found in Supabase, using localStorage:', payablesRes.error);
-          const localPayables = localStorage.getItem('fenix_payables');
-          payables = localPayables ? JSON.parse(localPayables) : [];
-        } else {
-          payables = (payablesRes.data || []) as Payable[];
-        }
 
         // Auto-update status for payables
         const today = new Date().toISOString().split('T')[0];
@@ -141,31 +140,26 @@ const App: React.FC = () => {
     }
   };
 
-  // Periodic Update for Invoice Statuses
+  // Periodic Update for Multi-User Sync (Shared Ledger)
   useEffect(() => {
     if (!state.currentUser) return;
 
-    // Call DB function to update statuses on load/interval
+    // Call DB function to update backend statuses
     const updateBackendStatuses = async () => {
       await supabase.rpc('update_invoice_statuses');
-      // Refetch strictly invoices if needed, or just rely on local calc for now
     };
 
     updateBackendStatuses();
 
     const interval = setInterval(() => {
+      // 1. Update statuses on server
       updateBackendStatuses();
-      // Re-calculate locally for immediate UI update
-      setState(prev => {
-        const updatedInvoices = prev.invoices.map(inv => {
-          const client = prev.clients.find(c => c.id === inv.client_id);
-          if (!client) return inv;
-          return calculateInvoiceStatusAndValues(inv, client);
-        });
-        if (JSON.stringify(updatedInvoices) === JSON.stringify(prev.invoices)) return prev;
-        return { ...prev, invoices: updatedInvoices };
-      });
-    }, 60000);
+
+      // 2. Sync Shared Data (Hunter <-> Laercio)
+      if (state.currentUser) {
+        fetchData(state.currentUser.id, true);
+      }
+    }, 45000); // Sync every 45 seconds
 
     return () => clearInterval(interval);
   }, [state.currentUser]); // Re-run when user logs in
