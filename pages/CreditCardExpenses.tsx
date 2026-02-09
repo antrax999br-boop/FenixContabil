@@ -179,9 +179,9 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
 
             {/* Matrix View (like Excel) */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h3 className="font-black text-slate-700 uppercase tracking-widest text-xs">Lançamentos em {selectedMonth}</h3>
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-2">
                         {cards.map(card => {
                             const isPaid = isMonthPaid(selectedMonth, card);
                             const cardHasItems = activeItems.some(i => i.card === card);
@@ -190,10 +190,15 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                                 <button
                                     key={card}
                                     onClick={() => onTogglePayment(selectedMonth, card, !isPaid)}
-                                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${isPaid ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-blue-100 text-blue-700 border border-blue-200'
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm border-2 ${isPaid
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                        : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:shadow-blue-100'
                                         }`}
                                 >
-                                    {card}: {isPaid ? 'FATURA PAGA' : 'MARCAR PAGO'}
+                                    <span className="material-symbols-outlined text-sm">
+                                        {isPaid ? 'check_circle' : 'pending'}
+                                    </span>
+                                    {card}: {isPaid ? 'FATURA PAGA' : 'MARCAR COMO PAGO'}
                                 </button>
                             );
                         })}
@@ -292,16 +297,25 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                     const isPaid = isMonthPaid(selectedMonth, card);
 
                     return (
-                        <div key={card} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                        <button
+                            key={card}
+                            onClick={() => onTogglePayment(selectedMonth, card, !isPaid)}
+                            className={`bg-white border text-left border-slate-200 rounded-2xl p-6 shadow-sm hover:scale-[1.02] transition-all active:scale-95 group ${isPaid ? 'border-emerald-200 bg-emerald-50/10' : 'hover:border-blue-300'}`}
+                        >
                             <div className="flex items-center justify-between mb-4">
                                 <h4 className="font-black text-slate-900 uppercase tracking-widest text-xs">{card}</h4>
-                                <span className={`px-2 py-0.5 rounded-md text-[9px] font-black ${isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                                     {isPaid ? 'PAGO' : 'EM ABERTO'}
                                 </span>
                             </div>
-                            <div className="text-2xl font-black text-slate-900 mb-1">{formatCurrency(Math.abs(cardTotal))}</div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total na Fatura</div>
-                        </div>
+                            <div className={`text-2xl font-black mb-1 ${isPaid ? 'text-emerald-700' : 'text-slate-900 group-hover:text-blue-600'}`}>{formatCurrency(Math.abs(cardTotal))}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                                <span>Total na Fatura</span>
+                                <span className="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {isPaid ? 'undo' : 'check_circle'}
+                                </span>
+                            </div>
+                        </button>
                     );
                 })}
             </div>
