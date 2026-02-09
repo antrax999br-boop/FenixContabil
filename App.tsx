@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, Payable, CalendarEvent, AppState,
-  UserProfile, InvoiceStatus, DailyPayment
+  UserProfile, InvoiceStatus, DailyPayment, CreditCardExpense, CreditCardPayment
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -13,6 +13,7 @@ import CalendarPage from './pages/Calendar';
 import SettingsPage from './pages/Settings';
 import ReportsPage from './pages/Reports';
 import DailyPaymentsPage from './pages/DailyPayments';
+import CreditCardExpensesPage from './pages/CreditCardExpenses';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
@@ -30,6 +31,8 @@ const App: React.FC = () => {
     invoices: [],
     payables: [],
     dailyPayments: [],
+    creditCardExpenses: [],
+    creditCardPayments: [],
     events: [],
     loading: true
   });
@@ -62,6 +65,7 @@ const App: React.FC = () => {
           ...prev,
           currentUser: null,
           users: [], clients: [], invoices: [], payables: [], dailyPayments: [], events: [],
+          creditCardExpenses: [], creditCardPayments: [],
           loading: false
         }));
       }
@@ -81,12 +85,14 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes] = await Promise.all([
         supabase.from('clients').select('*'),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
         supabase.from('payables').select('*'),
-        supabase.from('daily_payments').select('*').order('date', { ascending: false })
+        supabase.from('daily_payments').select('*').order('date', { ascending: false }),
+        supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }),
+        supabase.from('credit_card_payments').select('*')
       ]);
 
       if (profile) {
@@ -127,6 +133,9 @@ const App: React.FC = () => {
           return p;
         });
 
+        const creditCardExpenses = (creditCardExpensesRes.data || []) as CreditCardExpense[];
+        const creditCardPayments = (creditCardPaymentsRes.data || []) as CreditCardPayment[];
+
         setState(prev => ({
           ...prev,
           currentUser: profile as User,
@@ -134,6 +143,8 @@ const App: React.FC = () => {
           invoices: invoices,
           payables: payables,
           dailyPayments: (dailyPaymentsRes.data || []) as DailyPayment[],
+          creditCardExpenses,
+          creditCardPayments,
           events: events,
           loading: false
         }));

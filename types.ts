@@ -81,12 +81,33 @@ export interface DailyPayment {
 }
 
 
+// Credit Card Expenses
+export interface CreditCardExpense {
+  id: string; // UUID
+  purchase_date: string; // YYYY-MM-DD
+  description: string;
+  card: string; // Visa, Master, etc.
+  total_value: number;
+  total_installments: number;
+  created_at?: string;
+}
+
+export interface CreditCardPayment {
+  id: string; // UUID
+  year_month: string; // YYYY.MM
+  card: string; // Visa, Master, etc.
+  is_paid: boolean;
+  created_at?: string;
+}
+
 export interface AppState {
   users: User[];
   clients: Client[];
   invoices: Invoice[];
   payables: Payable[];
   dailyPayments: DailyPayment[];
+  creditCardExpenses: CreditCardExpense[];
+  creditCardPayments: CreditCardPayment[];
   events: CalendarEvent[];
   currentUser: User | null;
   loading: boolean;

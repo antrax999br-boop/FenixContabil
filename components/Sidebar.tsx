@@ -23,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
     { id: 'notas-internet', label: 'Boletos Pela Internet', icon: 'language' },
     { id: 'contas-pagar', label: 'Contas a Pagar', icon: 'payments' },
     { id: 'pagamentos-diarios', label: 'Pagamentos Diários', icon: 'savings' },
+    { id: 'controle_cartao', label: 'Controle de Cartão', icon: 'credit_card' },
     { id: 'clientes', label: 'Clientes', icon: 'group' },
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
   ];
@@ -31,7 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
   const isAdmin = adminEmails.includes(currentUserEmail || '');
 
   // Tabs that only admin (Laercio/Eliane) can see
-  const restrictedTabs = ['notas', 'notas-internet', 'contas-pagar', 'pagamentos-diarios', 'relatorios'];
+  const restrictedTabs = ['notas', 'notas-internet', 'contas-pagar', 'pagamentos-diarios', 'controle_cartao', 'relatorios'];
 
   const filteredMenuItems = menuItems.filter(item => {
     if (restrictedTabs.includes(item.id)) {
