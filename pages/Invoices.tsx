@@ -44,7 +44,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
       // General view: show everything
       matchesStatus = true;
     } else if (filter === 'ATIVOS') {
-      matchesStatus = isStandard && (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE);
+      matchesStatus = isStandard;
     } else if (filter === 'SEM_NOTA') {
       matchesStatus = isSemNota;
     } else if (filter === 'INTERNET') {
