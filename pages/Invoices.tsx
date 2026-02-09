@@ -14,7 +14,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
-  const [monthFilter, setMonthFilter] = useState<number | 'ALL'>('ALL');
+  const [monthFilter, setMonthFilter] = useState<number | 'ALL'>(new Date().getMonth());
   const [yearFilter, setYearFilter] = useState<number | 'ALL'>(new Date().getFullYear());
   const [newInvoice, setNewInvoice] = useState({
     invoice_number: '',
