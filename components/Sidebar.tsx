@@ -18,9 +18,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
   const menuItems: MenuItem[] = [
     { id: 'inicio', label: 'Início', icon: 'dashboard' },
     { id: 'notas', label: 'Boletos', icon: 'receipt_long' },
-    { id: 'notas-ativas', label: 'Boletos Ativos', icon: 'analytics', sub: true },
-    { id: 'notas-sem-nota', label: 'Boletos Sem Nota', icon: 'description_off', sub: true },
-    { id: 'notas-internet', label: 'Boletos Pela Internet', icon: 'cloud', sub: true },
+    { id: 'notas-ativas', label: 'Boletos Ativos', icon: 'local_fire_department' },
+    { id: 'notas-sem-nota', label: 'Boletos Sem Nota', icon: 'description_off' },
+    { id: 'notas-internet', label: 'Boletos Pela Internet', icon: 'language' },
     { id: 'clientes', label: 'Clientes', icon: 'group' },
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
   ];

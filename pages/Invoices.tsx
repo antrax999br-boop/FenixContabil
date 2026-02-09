@@ -166,6 +166,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Valor Original</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Vencimento</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ativo</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">S/ Nota</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Internet</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Valor Final</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ações</th>
               </tr>
@@ -218,6 +221,27 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                               }`} />
                             {inv.status}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {inv.status !== InvoiceStatus.PAID ? (
+                            <span className="material-symbols-outlined text-orange-500 text-lg" title="Ativo">local_fire_department</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {(!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') ? (
+                            <span className="material-symbols-outlined text-amber-500 text-lg" title="Sem Nota">description_off</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {(inv.invoice_number && inv.invoice_number.trim() !== '' && inv.invoice_number.toUpperCase() !== 'S/N' && inv.invoice_number.toUpperCase() !== 'S/AN') ? (
+                            <span className="material-symbols-outlined text-blue-500 text-lg" title="Internet">language</span>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">{formatCurrency(inv.final_value)}</td>
                         <td className="px-6 py-4">
