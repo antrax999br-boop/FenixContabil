@@ -17,10 +17,9 @@ interface Message {
 interface ChatWidgetProps {
     currentUser: User;
     onClose: () => void;
-    onNewMessage?: () => void;
 }
 
-const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose, onNewMessage }) => {
+const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
     const [view, setView] = useState<'list' | 'chat'>('list');
     const [employees, setEmployees] = useState<User[]>([]);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -86,7 +85,6 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose, onNewMess
                         } else {
                             // Message from someone else - show notification
                             setHasNewMessage(true);
-                            if (onNewMessage) onNewMessage();
                             // Simple beep notification
                             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
                             audio.play().catch(e => console.log('Audio blocked', e));

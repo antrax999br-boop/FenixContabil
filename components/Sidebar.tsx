@@ -15,7 +15,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
   ];
 
-  const allowedCalendarEmails = ['laercio@laercio.com.br', 'eliane@fenixcontabil.com.br'];
+  const allowedCalendarEmails = ['laercio@laercio.com.br', 'eliane@fenix.com.br'];
   const hasCalendarAccess = allowedCalendarEmails.includes(currentUserEmail || '');
 
   if (hasCalendarAccess) {

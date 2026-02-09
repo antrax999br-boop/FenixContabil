@@ -146,6 +146,34 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [state.currentUser]); // Re-run when user logs in
 
+  // Realtime Chat Notifications
+  useEffect(() => {
+    if (!state.currentUser) return;
+
+    const channel = supabase
+      .channel(`global-chat-notifications:${state.currentUser.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${state.currentUser.id}`
+      }, (payload) => {
+        // Only show notification if chat is not open OR if it is open but not in the chat with this person
+        // For simplicity, we'll just trigger it if showChat is false
+        if (!showChat) {
+          setHasNewChatMessage(true);
+          // Play notification sound
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+          audio.play().catch(e => console.log('Audio blocked', e));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [state.currentUser, showChat]);
+
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -486,9 +514,6 @@ const App: React.FC = () => {
         <ChatWidget
           currentUser={state.currentUser}
           onClose={() => setShowChat(false)}
-          onNewMessage={() => {
-            if (!showChat) setHasNewChatMessage(true);
-          }}
         />
       )}
 
