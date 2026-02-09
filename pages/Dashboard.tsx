@@ -9,26 +9,44 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
-  const paidTotal = state.invoices
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const isCurrentMonth = (dateStr: string) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  };
+
+  const currentMonthInvoices = state.invoices.filter(i => isCurrentMonth(i.due_date));
+
+  const paidTotal = currentMonthInvoices
     .filter(i => i.status === InvoiceStatus.PAID)
     .reduce((acc, i) => acc + i.final_value, 0);
 
-  const pendingCount = state.invoices.filter(i => i.status === InvoiceStatus.NOT_PAID).length;
-  const pendingTotal = state.invoices
+  const pendingCount = currentMonthInvoices.filter(i => i.status === InvoiceStatus.NOT_PAID).length;
+  const pendingTotal = currentMonthInvoices
     .filter(i => i.status === InvoiceStatus.NOT_PAID)
     .reduce((acc, i) => acc + i.final_value, 0);
 
-  const overdueCount = state.invoices.filter(i => i.status === InvoiceStatus.OVERDUE).length;
-  const overdueTotal = state.invoices
+  const overdueCount = currentMonthInvoices.filter(i => i.status === InvoiceStatus.OVERDUE).length;
+  const overdueTotal = currentMonthInvoices
     .filter(i => i.status === InvoiceStatus.OVERDUE)
     .reduce((acc, i) => acc + i.final_value, 0);
 
-  const recentInvoices = [...state.invoices]
+  const recentInvoices = [...currentMonthInvoices]
     .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
     .slice(0, 5);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Painel de Controle</h2>
+          <p className="text-sm text-slate-500 font-medium">Resumo financeiro de {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())}</p>
+        </div>
+      </div>
+
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start mb-4">
@@ -135,7 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
 
       <section className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h4 className="text-base font-bold text-slate-800">Transações Recentes</h4>
+          <h4 className="text-base font-bold text-slate-800">Boletos deste Mês</h4>
           <div className="flex gap-2">
             <button className="px-3 py-1.5 text-xs font-semibold bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Exportar CSV</button>
             <button onClick={() => onTabChange('notas')} className="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg shadow-sm hover:opacity-90 transition-opacity">Ver Tudo</button>
