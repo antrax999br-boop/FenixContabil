@@ -101,14 +101,15 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
     const generateMonthOptions = () => {
         const months = new Set<string>();
 
-        // Add current month and last 23 months (2 years total)
+        // Add months of the CURRENT year (2026) up to current month
         const now = new Date();
-        for (let i = 0; i < 24; i++) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const currentYear = now.getFullYear();
+        for (let m = 0; m <= now.getMonth(); m++) {
+            const d = new Date(currentYear, m, 1);
             months.add(d.toISOString().slice(0, 7));
         }
 
-        // Add any months that have data but might be older than 2 years
+        // Add any months that have data (if any exist from other years)
         dailyPayments.forEach(p => {
             months.add(p.date.slice(0, 7));
         });
