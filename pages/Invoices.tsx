@@ -35,14 +35,15 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
   const filteredInvoices = state.invoices.filter(i => {
     const client = state.clients.find(c => c.id === i.client_id);
 
-    const isSemNota = !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN';
     const isInternet = i.invoice_number?.startsWith('INT-');
+    const isSemNota = !isInternet && (!i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
+    const isStandard = !isInternet && !isSemNota;
 
     let matchesStatus = false;
     if (filter === 'ALL') {
-      matchesStatus = !isSemNota && !isInternet;
+      matchesStatus = isStandard;
     } else if (filter === 'ATIVOS') {
-      matchesStatus = i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE;
+      matchesStatus = (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE);
     } else if (filter === 'SEM_NOTA') {
       matchesStatus = isSemNota;
     } else if (filter === 'INTERNET') {
@@ -227,8 +228,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   )}
                   {groupedInvoices[monthIdx].map(inv => {
                     const client = state.clients.find(c => c.id === inv.client_id);
-                    const isSemNota = !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN';
                     const isInternet = inv.invoice_number?.startsWith('INT-');
+                    const isSemNota = !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
 
                     return (
                       <tr key={inv.id} className="hover:bg-primary/5 transition-colors group">
@@ -256,14 +257,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                         </td>
                         <td className="px-6 py-4 text-center">
                           {isSemNota ? (
-                            <span className="material-symbols-outlined text-amber-500 text-lg" title="Boletos Sem Nota">note_stack_off</span>
+                            <span className="material-symbols-outlined text-amber-500 text-lg" title="Boletos Sem Nota">assignment_late</span>
                           ) : (
                             <span className="text-slate-300">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {isInternet ? (
-                            <span className="material-symbols-outlined text-blue-500 text-lg" title="Boletos Internet">public</span>
+                            <span className="material-symbols-outlined text-blue-500 text-lg" title="Boletos Internet">language</span>
                           ) : (
                             <span className="text-slate-300">-</span>
                           )}
