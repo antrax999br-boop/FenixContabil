@@ -66,7 +66,7 @@ export interface DailyPayment {
   date: string; // YYYY-MM-DD
   description: string;
   category: string;
-  value: number;
+  value: string;
   created_at?: string;
 }
 
