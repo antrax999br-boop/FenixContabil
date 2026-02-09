@@ -37,7 +37,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
             </div>
             <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded uppercase tracking-wider">Pago</span>
           </div>
-          <p className="text-sm font-medium text-slate-500">Notas Pagas</p>
+          <p className="text-sm font-medium text-slate-500">Boletos Pagos</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(paidTotal)}</h3>
             <span className="text-xs font-semibold text-green-600">+12%</span>
@@ -53,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
               {pendingCount} Pendentes
             </span>
           </div>
-          <p className="text-sm font-medium text-slate-500">Notas Pendentes</p>
+          <p className="text-sm font-medium text-slate-500">Boletos Pendentes</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(pendingTotal)}</h3>
             <span className="text-xs font-semibold text-slate-400">Fluxo projetado</span>
@@ -124,7 +124,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
                 <span className="material-symbols-outlined text-2xl leading-none">description</span>
               </div>
               <div>
-                <h5 className="text-sm font-bold text-slate-800">Notas Fiscais</h5>
+                <h5 className="text-sm font-bold text-slate-800">Boletos</h5>
                 <p className="text-xs text-slate-500 mt-0.5">Recorrentes e Rascunhos</p>
               </div>
               <span className="material-symbols-outlined ml-auto text-slate-300 group-hover:text-purple-600 transition-colors">chevron_right</span>
@@ -146,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
             <thead>
               <tr className="bg-slate-50">
                 <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Cliente</th>
-                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">ID da Nota</th>
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">ID do Boleto</th>
                 <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Valor Final</th>
                 <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Vencimento</th>
                 <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
@@ -171,8 +171,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
                     <td className="px-6 py-4 text-sm text-slate-500">{inv.due_date}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${inv.status === InvoiceStatus.PAID ? 'bg-green-100 text-green-700' :
-                          inv.status === InvoiceStatus.OVERDUE ? 'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
+                        inv.status === InvoiceStatus.OVERDUE ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
                         }`}>
                         {inv.status}
                       </span>

@@ -78,7 +78,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(22);
         doc.setTextColor(255, 255, 255);
-        doc.text('Relatório Mensal de Notas Fiscais', 14, 20);
+        doc.text('Relatório Mensal de Boletos', 14, 20);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(12);
@@ -96,13 +96,13 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
         doc.text('RESUMO FINANCEIRO', 20, 55);
 
         doc.setFont('helvetica', 'normal');
-        doc.text(`Total de Notas: ${totals.total.count}`, 20, 62);
+        doc.text(`Total de Boletos: ${totals.total.count}`, 20, 62);
         doc.text(`Valor Total: ${formatCurrency(totals.total.value)}`, 20, 69);
 
         doc.setFontSize(10);
-        doc.text(`• Pagas: ${totals.pago.count} (${formatCurrency(totals.pago.value)})`, 100, 62);
+        doc.text(`• Pagos: ${totals.pago.count} (${formatCurrency(totals.pago.value)})`, 100, 62);
         doc.text(`• Pendentes: ${totals.pendente.count} (${formatCurrency(totals.pendente.value)})`, 100, 69);
-        doc.text(`• Atrasadas: ${totals.atrasado.count} (${formatCurrency(totals.atrasado.value)})`, 100, 76);
+        doc.text(`• Atrasados: ${totals.atrasado.count} (${formatCurrency(totals.atrasado.value)})`, 100, 76);
 
         // Table
         const tableData = filteredInvoices.map(inv => {
@@ -118,7 +118,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
 
         autoTable(doc, {
             startY: 85,
-            head: [['Nº Nota', 'Cliente', 'Vencimento', 'Valor Final', 'Status']],
+            head: [['Nº Boleto', 'Cliente', 'Vencimento', 'Valor Final', 'Status']],
             body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [15, 63, 168], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -149,7 +149,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                         <span className="material-symbols-outlined text-primary">assessment</span>
                         <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Relatórios Gerais</h2>
                     </div>
-                    <p className="text-slate-500 font-medium">Levantamento de notas e performance mensal do sistema.</p>
+                    <p className="text-slate-500 font-medium">Levantamento de boletos e performance mensal do sistema.</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4">
@@ -187,7 +187,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                     </div>
                     <p className="text-xs font-bold text-slate-400 mt-6 flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm">filter_none</span>
-                        {totals.total.count} notas filtradas
+                        {totals.total.count} boletos filtrados
                     </p>
                 </div>
 
@@ -199,7 +199,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                     <h3 className="text-3xl font-black text-slate-800">{formatCurrency(totals.pago.value)}</h3>
                     <p className="text-xs font-black text-green-600 mt-6 flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm">check_circle</span>
-                        {totals.pago.count} notas pagas
+                        {totals.pago.count} boletos pagos
                     </p>
                 </div>
 
@@ -211,7 +211,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                     <h3 className="text-3xl font-black text-slate-800">{formatCurrency(totals.pendente.value)}</h3>
                     <p className="text-xs font-black text-yellow-600 mt-6 flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm">schedule</span>
-                        {totals.pendente.count} notas pendentes
+                        {totals.pendente.count} boletos pendentes
                     </p>
                 </div>
 
@@ -223,7 +223,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                     <h3 className="text-3xl font-black text-slate-800">{formatCurrency(totals.atrasado.value)}</h3>
                     <p className="text-xs font-black text-red-600 mt-6 flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm">error</span>
-                        {totals.atrasado.count} notas vencidas
+                        {totals.atrasado.count} boletos vencidos
                     </p>
                 </div>
             </section>
@@ -336,7 +336,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                                     <td colSpan={5} className="px-10 py-16 text-center">
                                         <div className="flex flex-col items-center gap-3">
                                             <span className="material-symbols-outlined text-5xl text-slate-200">folder_off</span>
-                                            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Nenhuma nota para este período</p>
+                                            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Nenhum boleto para este período</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -349,7 +349,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
                                             <tr key={inv.id} className="hover:bg-slate-50/80 transition-all group">
                                                 <td className="px-10 py-6">
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-slate-800 leading-none mb-1">Nota #{inv.invoice_number}</span>
+                                                        <span className="text-sm font-black text-slate-800 leading-none mb-1">Boleto #{inv.invoice_number}</span>
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">REF: {inv.id.substring(0, 8).toUpperCase()}</span>
                                                     </div>
                                                 </td>

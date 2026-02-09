@@ -17,12 +17,14 @@ interface Message {
 interface ChatWidgetProps {
     currentUser: User;
     onClose: () => void;
+    onNewMessage?: () => void;
 }
 
-const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
+const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose, onNewMessage }) => {
     const [view, setView] = useState<'list' | 'chat'>('list');
     const [employees, setEmployees] = useState<User[]>([]);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [hasNewMessage, setHasNewMessage] = useState(false);
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -81,6 +83,13 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
                         // Check if this message is from the user we are currently chatting with
                         if (newMsg.sender_id === selectedUser.id) {
                             setMessages(prev => [...prev, newMsg]);
+                        } else {
+                            // Message from someone else - show notification
+                            setHasNewMessage(true);
+                            if (onNewMessage) onNewMessage();
+                            // Simple beep notification
+                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+                            audio.play().catch(e => console.log('Audio blocked', e));
                         }
                     }
                 )
@@ -126,6 +135,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
         setView('list');
         setSelectedUser(null);
         setMessages([]);
+        setHasNewMessage(false); // Clear notification when going back to list
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,12 +248,16 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ currentUser, onClose }) => {
             <div className="bg-brand-navy p-4 shrink-0 flex items-center justify-between text-white">
                 <div className="flex items-center gap-2">
                     {view === 'chat' && (
-                        <button onClick={handleBack} className="hover:bg-white/10 rounded-full p-1 mr-1 transition-colors">
+                        <button onClick={handleBack} className="hover:bg-white/10 rounded-full p-1 mr-1 transition-colors relative">
                             <span className="material-symbols-outlined text-base">arrow_back</span>
+                            {hasNewMessage && (
+                                <span className="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border border-white"></span>
+                            )}
                         </button>
                     )}
                     <h3 className="font-bold text-sm tracking-wide">
                         {view === 'list' ? 'Equipe Fenix' : selectedUser?.name || 'Chat'}
+                        {view === 'list' && hasNewMessage && <span className="ml-2 inline-block size-2 bg-red-500 rounded-full animate-pulse"></span>}
                     </h3>
                 </div>
                 <div className="flex items-center gap-1">

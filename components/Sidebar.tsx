@@ -4,17 +4,23 @@ import React from 'react';
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  // onLogout removed from Sidebar
+  currentUserEmail?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEmail }) => {
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: 'dashboard' },
-    { id: 'notas', label: 'Notas Fiscais', icon: 'receipt_long' },
+    { id: 'notas', label: 'Boletos', icon: 'receipt_long' },
     { id: 'clientes', label: 'Clientes', icon: 'group' },
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
-    { id: 'calendario', label: 'Calendário', icon: 'calendar_today' },
   ];
+
+  const allowedCalendarEmails = ['laercio@laercio.com.br', 'eliane@fenixcontabil.com.br'];
+  const hasCalendarAccess = allowedCalendarEmails.includes(currentUserEmail || '');
+
+  if (hasCalendarAccess) {
+    menuItems.push({ id: 'calendario', label: 'Calendário', icon: 'calendar_today' });
+  }
 
   // Logo Fenix (Versão otimizada para o sistema)
   const fenixLogo = "/fenix-logo.png";
@@ -59,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           className="w-full bg-brand-orange hover:bg-orange-600 transition-colors text-white py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-brand-orange/20"
         >
           <span className="material-symbols-outlined text-base">add_circle</span>
-          Nova Nota Fiscal
+          Novo Boleto
         </button>
       </div>
     </aside>

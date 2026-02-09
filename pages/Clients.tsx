@@ -150,7 +150,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Juros de Mora (%)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Juros e Multa (%)</label>
                 <input
                   required
                   type="number"

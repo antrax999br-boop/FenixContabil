@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [hasNewChatMessage, setHasNewChatMessage] = useState(false);
 
   // Auth & Data Fetching
   useEffect(() => {
@@ -448,16 +449,23 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background-light">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        currentUserEmail={state.currentUser?.email}
+      />
       <div className="flex flex-col flex-1 min-w-0">
         <Header
           user={state.currentUser}
           onNotificationsClick={() => setShowNotifications(!showNotifications)}
-          onChatClick={() => setShowChat(!showChat)}
+          onChatClick={() => {
+            setShowChat(!showChat);
+            setHasNewChatMessage(false);
+          }}
           onProfileClick={() => setShowProfile(true)}
           onSettingsClick={() => setActiveTab('configuracoes')}
           onLogout={logout}
-          hasUnreadNotifications={hasUnread}
+          hasUnreadNotifications={hasUnread || hasNewChatMessage}
         />
         {showNotifications && (
           <div className="fixed top-16 right-24 z-50">
@@ -474,7 +482,15 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      {showChat && <ChatWidget currentUser={state.currentUser} onClose={() => setShowChat(false)} />}
+      {showChat && (
+        <ChatWidget
+          currentUser={state.currentUser}
+          onClose={() => setShowChat(false)}
+          onNewMessage={() => {
+            if (!showChat) setHasNewChatMessage(true);
+          }}
+        />
+      )}
 
       {showProfile && state.currentUser && (
         <ProfileModal
