@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  User, Client, Invoice, CalendarEvent, AppState,
+  User, Client, Invoice, Payable, CalendarEvent, AppState,
   UserProfile, InvoiceStatus
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ClientsPage from './pages/Clients';
 import InvoicesPage from './pages/Invoices';
+import PayablesPage from './pages/Payables';
 import CalendarPage from './pages/Calendar';
 import SettingsPage from './pages/Settings';
 import ReportsPage from './pages/Reports';
@@ -26,6 +27,7 @@ const App: React.FC = () => {
     users: [],
     clients: [],
     invoices: [],
+    payables: [],
     events: [],
     loading: true
   });
@@ -57,7 +59,7 @@ const App: React.FC = () => {
         setState(prev => ({
           ...prev,
           currentUser: null,
-          users: [], clients: [], invoices: [], events: [],
+          users: [], clients: [], invoices: [], payables: [], events: [],
           loading: false
         }));
       }
@@ -102,11 +104,33 @@ const App: React.FC = () => {
           created_by: e.profiles?.name || 'Unknown'
         }));
 
+        // Fetch Payables with Fallback
+        let payablesRes = await supabase.from('payables').select('*');
+        let payables: Payable[] = [];
+
+        if (payablesRes.error) {
+          console.warn('Payables table not found in Supabase, using localStorage:', payablesRes.error);
+          const localPayables = localStorage.getItem('fenix_payables');
+          payables = localPayables ? JSON.parse(localPayables) : [];
+        } else {
+          payables = (payablesRes.data || []) as Payable[];
+        }
+
+        // Auto-update status for payables
+        const today = new Date().toISOString().split('T')[0];
+        payables = payables.map(p => {
+          if (p.status !== InvoiceStatus.PAID && p.due_date < today) {
+            return { ...p, status: InvoiceStatus.OVERDUE };
+          }
+          return p;
+        });
+
         setState(prev => ({
           ...prev,
           currentUser: profile as User,
           clients: clients,
           invoices: invoices,
+          payables: payables,
           events: events,
           loading: false
         }));
@@ -439,6 +463,59 @@ const App: React.FC = () => {
     }
   };
 
+  const addPayable = async (payableData: Omit<Payable, 'id' | 'status'>) => {
+    const newP: Payable = {
+      ...payableData,
+      id: crypto.randomUUID(),
+      status: payableData.due_date < new Date().toISOString().split('T')[0] ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID,
+      created_at: new Date().toISOString()
+    };
+
+    // Try Supabase first
+    const { error } = await supabase.from('payables').insert([newP]);
+
+    if (error) {
+      console.warn('Failed to save payable to Supabase, saving to localStorage:', error);
+      const updated = [...state.payables, newP];
+      localStorage.setItem('fenix_payables', JSON.stringify(updated));
+      setState(prev => ({ ...prev, payables: updated }));
+    } else {
+      setState(prev => ({ ...prev, payables: [...prev.payables, newP] }));
+    }
+  };
+
+  const markPayablePaid = async (id: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    const { error } = await supabase
+      .from('payables')
+      .update({ status: InvoiceStatus.PAID, payment_date: today })
+      .eq('id', id);
+
+    if (error) {
+      console.warn('Failed to update payable in Supabase, updating localStorage');
+      const updated = state.payables.map(p =>
+        p.id === id ? { ...p, status: InvoiceStatus.PAID, payment_date: today } : p
+      );
+      localStorage.setItem('fenix_payables', JSON.stringify(updated));
+      setState(prev => ({ ...prev, payables: updated }));
+    } else {
+      setState(prev => ({
+        ...prev,
+        payables: prev.payables.map(p => p.id === id ? { ...p, status: InvoiceStatus.PAID, payment_date: today } : p)
+      }));
+    }
+  };
+
+  const deletePayable = async (id: string) => {
+    const { error } = await supabase.from('payables').delete().eq('id', id);
+    if (error) {
+      console.warn('Failed to delete payable from Supabase, removing from localStorage');
+    }
+    const updated = state.payables.filter(p => p.id !== id);
+    localStorage.setItem('fenix_payables', JSON.stringify(updated));
+    setState(prev => ({ ...prev, payables: updated }));
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -455,6 +532,7 @@ const App: React.FC = () => {
       case 'notas-ativas': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="ATIVOS" />;
       case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
       case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="INTERNET" />;
+      case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={markPayablePaid} onDelete={deletePayable} />;
       case 'relatorios': return <ReportsPage state={state} />;
       case 'calendario':
         return <CalendarPage

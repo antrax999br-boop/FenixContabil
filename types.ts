@@ -50,10 +50,22 @@ export interface CalendarEvent {
   created_by: string; // user id or name name
 }
 
+export interface Payable {
+  id: string; // UUID
+  description: string;
+  value: number;
+  due_date: string; // YYYY-MM-DD
+  payment_date?: string | null;
+  prazo?: string;
+  status: InvoiceStatus;
+  created_at?: string;
+}
+
 export interface AppState {
   users: User[];
   clients: Client[];
   invoices: Invoice[];
+  payables: Payable[];
   events: CalendarEvent[];
   currentUser: User | null;
   loading: boolean;
