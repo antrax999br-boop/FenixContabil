@@ -19,20 +19,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background-light">
       <div className="mb-8 flex flex-col items-center text-center">
-        <div className="relative w-28 h-28 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-4 p-3 overflow-hidden border border-slate-100 ring-4 ring-white">
+        <div className="w-full max-w-sm mb-6">
           <img
             src={fenixLogo}
             alt="Fenix Contábil Logo"
-            className="w-full h-full object-contain"
+            className="w-full h-auto object-contain drop-shadow-xl"
             onError={(e) => {
               (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
             }}
           />
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-brand-orange rounded-full border-4 border-white"></div>
         </div>
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-          Fenix <span className="text-primary">Contábil</span>
-        </h1>
         <p className="text-slate-500 text-sm mt-1 font-medium italic">"Excelência e Renovação em Contabilidade"</p>
       </div>
 

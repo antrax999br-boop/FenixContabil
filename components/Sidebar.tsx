@@ -21,21 +21,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
   return (
     <aside className="w-64 bg-brand-navy shrink-0 flex flex-col h-full">
-      <div className="p-6 flex items-center gap-3">
-        <div className="size-12 bg-white rounded-xl flex items-center justify-center relative overflow-hidden p-1 shadow-md">
+      <div className="p-6">
+        <div className="flex items-center justify-center bg-white/5 rounded-xl p-3 backdrop-blur-sm border border-white/10">
           <img
             src={fenixLogo}
-            alt="Fenix Logo"
-            className="w-full h-full object-contain z-10"
+            alt="Fenix Contábil"
+            className="w-full h-auto max-h-12 object-contain"
             onError={(e) => {
-              // Fallback caso a imagem falhe
               (e.target as HTMLImageElement).src = "https://img.icons8.com/color/96/phoenix.png";
             }}
           />
-        </div>
-        <div>
-          <h1 className="text-white text-lg font-bold leading-tight">Fenix</h1>
-          <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Contabilidade</p>
         </div>
       </div>
 

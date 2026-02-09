@@ -15,8 +15,16 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ user, onNotificationsClick, onChatClick, onProfileClick, onSettingsClick, onLogout, hasUnreadNotifications }) => {
   return (
     <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-20">
-      <div className="flex items-center gap-8">
-        <h2 className="text-lg font-bold text-slate-800">Fenix Contábil</h2>
+      <div className="flex items-center gap-3">
+        <img
+          src="/fenix-logo.png"
+          alt="Fenix Contábil"
+          className="h-8 w-auto object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+        <h2 className="text-lg font-bold text-slate-800 sm:block hidden">Fenix Contábil</h2>
       </div>
 
       <div className="flex items-center gap-4">
