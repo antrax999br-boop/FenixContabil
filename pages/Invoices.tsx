@@ -41,9 +41,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
 
     let matchesStatus = false;
     if (filter === 'ALL') {
-      matchesStatus = isStandard;
+      // General view: show everything
+      matchesStatus = true;
     } else if (filter === 'ATIVOS') {
-      matchesStatus = (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE);
+      matchesStatus = isStandard && (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE);
     } else if (filter === 'SEM_NOTA') {
       matchesStatus = isSemNota;
     } else if (filter === 'INTERNET') {
@@ -105,6 +106,29 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     if (!num) return 'S/N';
     if (num.startsWith('INT-')) return num.replace('INT-', '');
     return num;
+  };
+
+  const renderStatusBadge = (invoice: Invoice, categoryIcon: string, iconColor: string) => {
+    const isPaid = invoice.status === InvoiceStatus.PAID;
+    const isOverdue = invoice.status === InvoiceStatus.OVERDUE;
+
+    let badgeColor = "bg-amber-100 text-amber-700 border-amber-200";
+    let statusText = "PENDENTE";
+
+    if (isPaid) {
+      badgeColor = "bg-emerald-100 text-emerald-700 border-emerald-200";
+      statusText = "PAGO";
+    } else if (isOverdue) {
+      badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
+      statusText = "ATRASADO";
+    }
+
+    return (
+      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black tracking-wider uppercase ${badgeColor}`}>
+        <span className={`material-symbols-outlined text-[14px] ${iconColor}`}>{categoryIcon}</span>
+        {statusText}
+      </div>
+    );
   };
 
   return (
@@ -178,13 +202,13 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
               value={filter}
               onChange={e => setFilter(e.target.value as any)}
             >
-              <option value="ALL">📋 Todos os Registros</option>
-              <option value="ATIVOS">🔥 Apenas Ativos</option>
+              <option value="ALL">📋 Visualização Geral</option>
+              <option value="ATIVOS">🔥 Boletos Iniciais</option>
               <option value="SEM_NOTA">📄 Boletos Sem Nota</option>
               <option value="INTERNET">🌐 Boletos Internet</option>
-              <option value={InvoiceStatus.PAID}>Pago</option>
-              <option value={InvoiceStatus.NOT_PAID}>Pendente</option>
-              <option value={InvoiceStatus.OVERDUE}>Atrasado</option>
+              <option value={InvoiceStatus.PAID}>Somente Pagos</option>
+              <option value={InvoiceStatus.NOT_PAID}>Somente Pendentes</option>
+              <option value={InvoiceStatus.OVERDUE}>Somente Atrasados</option>
             </select>
           </div>
         </div>
@@ -230,6 +254,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                     const client = state.clients.find(c => c.id === inv.client_id);
                     const isInternet = inv.invoice_number?.startsWith('INT-');
                     const isSemNota = !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
+                    const isStandard = !isInternet && !isSemNota;
 
                     return (
                       <tr key={inv.id} className="hover:bg-primary/5 transition-colors group">
@@ -249,25 +274,13 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                           {new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {inv.status !== InvoiceStatus.PAID ? (
-                            <span className="material-symbols-outlined text-orange-500 text-lg" title="Boletos Ativos">local_fire_department</span>
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
+                          {isStandard ? renderStatusBadge(inv, 'local_fire_department', 'text-orange-500') : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {isSemNota ? (
-                            <span className="material-symbols-outlined text-amber-500 text-lg" title="Boletos Sem Nota">assignment_late</span>
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
+                          {isSemNota ? renderStatusBadge(inv, 'assignment_late', 'text-amber-500') : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {isInternet ? (
-                            <span className="material-symbols-outlined text-blue-500 text-lg" title="Boletos Internet">language</span>
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
+                          {isInternet ? renderStatusBadge(inv, 'language', 'text-blue-500') : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">{formatCurrency(inv.final_value)}</td>
                         <td className="px-6 py-4">
