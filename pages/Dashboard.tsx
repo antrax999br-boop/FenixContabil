@@ -120,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-amber-500">
           <div className="flex justify-between items-start mb-4">
             <div className="size-12 rounded-lg bg-amber-50 flex items-center justify-center">
-              <span className="material-symbols-outlined text-amber-600">description_off</span>
+              <span className="material-symbols-outlined text-amber-600">assignment_late</span>
             </div>
             <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded uppercase tracking-wider">
               {noInvoiceCount} Sem Nota
