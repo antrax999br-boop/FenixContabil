@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DailyPayment } from '../types';
 import { formatCurrency } from '../utils/calculations';
 
@@ -8,52 +8,55 @@ interface DailyPaymentsPageProps {
     onDelete: (id: string) => void;
 }
 
+const CATEGORIES = [
+    'Ativos',
+    'Inativos',
+    'Alteração',
+    'Distrato',
+    'Remissão de GPS',
+    'Recal Guia',
+    'Regularização',
+    'Outros',
+    'Rent Invest Fácil',
+    'Abertura',
+    'Parcelamentos'
+];
+
 const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, onAdd, onDelete }) => {
     const [showModal, setShowModal] = useState(false);
-
     const [newPayment, setNewPayment] = useState<Omit<DailyPayment, 'id' | 'created_at'>>({
         date: new Date().toISOString().split('T')[0],
-        ativos: '',
-        inativos: '',
-        alteracao: '',
-        distrato: '',
-        remissao_gps: '',
-        recal_guia: '',
-        regularizacao: '',
-        outros: '',
-        rent_invest_facil: '',
-        abertura: '',
-        parcelamentos: '',
-        total: ''
+        description: '',
+        category: '',
+        value: 0
     });
 
-    // Removed auto-calculation since fields are now text
+    // Validations: description mandatory, value > 0, category mandatory
+    const isFormValid = newPayment.description.trim() !== '' &&
+        newPayment.category !== '' &&
+        newPayment.value > 0;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isFormValid) return;
+
         onAdd(newPayment);
         setShowModal(false);
         // Reset form
         setNewPayment({
             date: new Date().toISOString().split('T')[0],
-            ativos: '',
-            inativos: '',
-            alteracao: '',
-            distrato: '',
-            remissao_gps: '',
-            recal_guia: '',
-            regularizacao: '',
-            outros: '',
-            rent_invest_facil: '',
-            abertura: '',
-            parcelamentos: '',
-            total: ''
+            description: '',
+            category: '',
+            value: 0
         });
     };
 
-    const handleInputChange = (field: keyof Omit<DailyPayment, 'id' | 'created_at'>, value: string) => {
+    const handleInputChange = (field: keyof Omit<DailyPayment, 'id' | 'created_at'>, value: string | number) => {
         setNewPayment(prev => ({ ...prev, [field]: value }));
     };
+
+    // Calculate total sum of numeric values
+    const totalValue = dailyPayments.reduce((acc, curr) => acc + (Number(curr.value) || 0), 0);
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -66,68 +69,64 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                     </nav>
                     <h2 className="text-3xl font-black tracking-tight text-slate-900">Pagamentos Diários</h2>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
-                >
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Novo Registro
-                </button>
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="bg-emerald-50 border border-emerald-100 px-6 py-2 rounded-xl text-right">
+                        <span className="block text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-0.5">Total Acumulado</span>
+                        <span className="text-2xl font-black text-emerald-700">{formatCurrency(totalValue)}</span>
+                    </div>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                    >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        Adicionar Pagamento
+                    </button>
+                </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse whitespace-nowrap">
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50/50">
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase sticky left-0 bg-slate-50 z-10">Data</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Ativos</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Inativos</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Alteração</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Distrato</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Remissão GPS</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Recal Guia</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Regularização</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Rent. Invest Fácil</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Abertura</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Parcelamentos</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Outros</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase sticky right-0 bg-slate-50 z-10">Total</th>
-                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase text-center">Ações</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Data</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Descrição</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Categoria</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-right">Valor</th>
+                                <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {dailyPayments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={14} className="px-6 py-12 text-center text-slate-400">
-                                        Nenhum registro encontrado.
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">
+                                        Nenhum lançamento encontrado.
                                     </td>
                                 </tr>
                             ) : (
                                 dailyPayments.map((p) => (
                                     <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="px-4 py-3 text-sm font-semibold text-slate-900 sticky left-0 bg-white group-hover:bg-slate-50">
+                                        <td className="px-6 py-4 text-sm font-bold text-slate-700">
                                             {new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.ativos}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.inativos}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.alteracao}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.distrato}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.remissao_gps}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.recal_guia}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.regularizacao}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.rent_invest_facil}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.abertura}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.parcelamentos}</td>
-                                        <td className="px-4 py-3 text-xs text-slate-600">{p.outros}</td>
-                                        <td className="px-4 py-3 text-xs font-bold text-emerald-600 sticky right-0 bg-white group-hover:bg-slate-50">
-                                            {p.total}
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm font-medium text-slate-900">{p.description}</div>
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-6 py-4">
+                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">
+                                                {p.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className="text-sm font-black text-emerald-600">
+                                                {formatCurrency(Number(p.value) || 0)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
                                             <button
                                                 onClick={() => onDelete(p.id)}
-                                                className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                title="Excluir"
+                                                className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 active:scale-90"
+                                                title="Excluir Lançamento"
                                             >
                                                 <span className="material-symbols-outlined text-lg">delete</span>
                                             </button>
@@ -142,50 +141,89 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
 
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-                        <div className="px-6 py-4 bg-blue-600 text-white flex items-center justify-between sticky top-0 z-10">
-                            <h3 className="font-black uppercase tracking-tight">Novo Registro Diário</h3>
-                            <button onClick={() => setShowModal(false)} className="hover:rotate-90 transition-transform">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-8 py-5 bg-blue-600 text-white flex items-center justify-between">
+                            <h3 className="font-black uppercase tracking-widest text-sm">Novo Pagamento Diário</h3>
+                            <button onClick={() => setShowModal(false)} className="hover:rotate-90 transition-transform p-1">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <div className="col-span-1 md:col-span-3">
-                                    <label className="block text-xs font-black text-slate-500 uppercase mb-1">Data</label>
+                        <form onSubmit={handleSubmit} className="p-8">
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data do Pagamento</label>
                                     <input
                                         required
-                                        className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20"
+                                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
                                         type="date"
                                         value={newPayment.date}
                                         onChange={e => handleInputChange('date', e.target.value)}
                                     />
                                 </div>
 
-                                {Object.keys(newPayment).map((key) => {
-                                    if (key === 'date') return null;
-                                    const label = key.replace(/_/g, ' ').toUpperCase();
-                                    return (
-                                        <div key={key}>
-                                            <label className="block text-xs font-black text-slate-500 uppercase mb-1 whitespace-nowrap overflow-hidden text-ellipsis">{label}</label>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Descrição do Pagamento</label>
+                                    <input
+                                        required
+                                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium"
+                                        type="text"
+                                        placeholder="Ex: Pagamento Fornecedor X, Recibo #123"
+                                        value={newPayment.description}
+                                        onChange={e => handleInputChange('description', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Categoria</label>
+                                        <select
+                                            required
+                                            className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-medium appearance-none"
+                                            value={newPayment.category}
+                                            onChange={e => handleInputChange('category', e.target.value)}
+                                        >
+                                            <option value="">Selecione...</option>
+                                            {CATEGORIES.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Valor (BRL)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">R$</span>
                                             <input
-                                                className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20"
-                                                type="text"
-                                                placeholder="Insira valor/texto"
-                                                value={(newPayment as any)[key]}
-                                                onChange={e => handleInputChange(key as any, e.target.value)}
+                                                required
+                                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-sm focus:border-blue-500 focus:bg-white outline-none transition-all font-bold"
+                                                type="number"
+                                                step="0.01"
+                                                min="0.01"
+                                                placeholder="0,00"
+                                                value={newPayment.value || ''}
+                                                onChange={e => handleInputChange('value', parseFloat(e.target.value) || 0)}
                                             />
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-end pt-4 border-t border-slate-100">
+                            <div className="mt-8 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="flex-1 px-6 py-4 border-2 border-slate-100 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-50 transition-all"
+                                >
+                                    Cancelar
+                                </button>
                                 <button
                                     type="submit"
-                                    className="px-8 py-3 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                                    disabled={!isFormValid}
+                                    className={`flex-[2] px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 ${isFormValid
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
+                                            : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                        }`}
                                 >
-                                    Salvar
+                                    Confirmar Lançamento
                                 </button>
                             </div>
                         </form>
