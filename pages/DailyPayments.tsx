@@ -97,7 +97,26 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
     // Overall total
     const totalValue = filteredPayments.reduce((acc, curr) => acc + calculateRowTotal(curr), 0);
 
-    const availableMonths = Array.from(new Set(dailyPayments.map(p => p.date.slice(0, 7)))).sort().reverse();
+    // Generate a list of months to show in the filter
+    const generateMonthOptions = () => {
+        const months = new Set<string>();
+
+        // Add current month and last 23 months (2 years total)
+        const now = new Date();
+        for (let i = 0; i < 24; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.add(d.toISOString().slice(0, 7));
+        }
+
+        // Add any months that have data but might be older than 2 years
+        dailyPayments.forEach(p => {
+            months.add(p.date.slice(0, 7));
+        });
+
+        return Array.from(months).sort().reverse();
+    };
+
+    const monthOptions = generateMonthOptions();
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -120,12 +139,7 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                             className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm"
                         >
                             <option value="all">VER TODOS OS MESES</option>
-                            {!availableMonths.includes(new Date().toISOString().slice(0, 7)) && (
-                                <option value={new Date().toISOString().slice(0, 7)}>
-                                    {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
-                                </option>
-                            )}
-                            {availableMonths.map(month => (
+                            {monthOptions.map(month => (
                                 <option key={month} value={month}>
                                     {new Date(month + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
                                 </option>
