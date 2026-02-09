@@ -11,6 +11,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: 'dashboard' },
     { id: 'notas', label: 'Boletos', icon: 'receipt_long' },
+    { id: 'notas-ativas', label: 'Boletos Ativos', icon: 'analytics', sub: true },
+    { id: 'notas-sem-nota', label: 'Boletos Sem Nota', icon: 'description_off', sub: true },
+    { id: 'notas-internet', label: 'Boletos Pela Internet', icon: 'cloud', sub: true },
     { id: 'clientes', label: 'Clientes', icon: 'group' },
     { id: 'relatorios', label: 'Relatórios', icon: 'bar_chart' },
   ];
@@ -47,13 +50,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${activeTab === item.id
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${(item as any).sub ? 'ml-6 w-[auto] py-1.5 opacity-80' : ''} ${activeTab === item.id
               ? 'bg-white/10 text-white shadow-sm'
               : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
           >
-            <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
-            <span className="text-sm font-medium">{item.label}</span>
+            <span className={`material-symbols-outlined ${(item as any).sub ? 'text-[18px]' : 'text-[22px]'}`}>{item.icon}</span>
+            <span className={`${(item as any).sub ? 'text-xs' : 'text-sm'} font-medium`}>{item.label}</span>
           </button>
         ))}
 

@@ -8,11 +8,12 @@ interface InvoicesPageProps {
   onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'>) => void;
   onPay: (id: string) => void;
   onDelete: (id: string) => void;
+  initialFilter?: InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET';
 }
 
-const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDelete }) => {
+const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDelete, initialFilter }) => {
   const [showModal, setShowModal] = useState(false);
-  const [filter, setFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
+  const [filter, setFilter] = useState<InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET'>(initialFilter || 'ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState<number | 'ALL'>(new Date().getMonth());
   const [yearFilter, setYearFilter] = useState<number | 'ALL'>(new Date().getFullYear());
@@ -33,7 +34,16 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
 
   const filteredInvoices = state.invoices.filter(i => {
     const client = state.clients.find(c => c.id === i.client_id);
-    const matchesStatus = filter === 'ALL' || i.status === filter;
+
+    let matchesStatus = filter === 'ALL' || i.status === filter;
+    if (filter === 'ATIVOS') {
+      matchesStatus = i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE;
+    } else if (filter === 'SEM_NOTA') {
+      matchesStatus = !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN';
+    } else if (filter === 'INTERNET') {
+      const isSemNota = !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN';
+      matchesStatus = !isSemNota;
+    }
 
     const invoiceDate = new Date(i.due_date + 'T12:00:00'); // Add time to avoid TZ issues
     const matchesMonth = monthFilter === 'ALL' || invoiceDate.getMonth() === monthFilter;
@@ -128,11 +138,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
             </select>
 
             <select
-              className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
+              className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-primary/20 text-slate-900 font-bold"
               value={filter}
               onChange={e => setFilter(e.target.value as any)}
             >
               <option value="ALL">Todos os Status</option>
+              <option value="ATIVOS">🔥 Apenas Ativos</option>
+              <option value="SEM_NOTA">📄 Sem Nota Fiscal</option>
+              <option value="INTERNET">🌐 Pela Internet</option>
               <option value={InvoiceStatus.PAID}>Pago</option>
               <option value={InvoiceStatus.NOT_PAID}>Pendente</option>
               <option value={InvoiceStatus.OVERDUE}>Atrasado</option>

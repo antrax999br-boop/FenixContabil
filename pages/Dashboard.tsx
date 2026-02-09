@@ -34,6 +34,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
     .filter(i => i.status === InvoiceStatus.OVERDUE)
     .reduce((acc, i) => acc + i.final_value, 0);
 
+  // New calculations
+  const activeCount = pendingCount + overdueCount;
+  const activeTotal = pendingTotal + overdueTotal;
+  const noInvoiceCount = currentMonthInvoices.filter(i => !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/AN' || i.invoice_number.toUpperCase() === 'S/N').length;
+  const noInvoiceTotal = currentMonthInvoices
+    .filter(i => !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/AN' || i.invoice_number.toUpperCase() === 'S/N')
+    .reduce((acc, i) => acc + i.final_value, 0);
+
   const recentInvoices = [...currentMonthInvoices]
     .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
     .slice(0, 5);
@@ -58,7 +66,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
           <p className="text-sm font-medium text-slate-500">Boletos Pagos</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(paidTotal)}</h3>
-            <span className="text-xs font-semibold text-green-600">+12%</span>
           </div>
         </div>
 
@@ -74,7 +81,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
           <p className="text-sm font-medium text-slate-500">Boletos Pendentes</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(pendingTotal)}</h3>
-            <span className="text-xs font-semibold text-slate-400">Fluxo projetado</span>
           </div>
         </div>
 
@@ -90,7 +96,40 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
           <p className="text-sm font-medium text-slate-500">Valor em Aberto (Atraso)</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(overdueTotal)}</h3>
-            <span className="text-xs font-semibold text-red-600">Crítico</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-primary">
+          <div className="flex justify-between items-start mb-4">
+            <div className="size-12 rounded-lg bg-primary/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary">analytics</span>
+            </div>
+            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-1 rounded uppercase tracking-wider">
+              {activeCount} Total Ativos
+            </span>
+          </div>
+          <p className="text-sm font-medium text-slate-500">Boletos Ativos (Pendente + Atraso)</p>
+          <div className="flex items-baseline gap-2 mt-1">
+            <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(activeTotal)}</h3>
+            <span className="text-xs font-semibold text-slate-400">Total a receber no mês</span>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-amber-500">
+          <div className="flex justify-between items-start mb-4">
+            <div className="size-12 rounded-lg bg-amber-50 flex items-center justify-center">
+              <span className="material-symbols-outlined text-amber-600">description_off</span>
+            </div>
+            <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded uppercase tracking-wider">
+              {noInvoiceCount} Sem Nota
+            </span>
+          </div>
+          <p className="text-sm font-medium text-slate-500">Boletos Sem Nota Fiscal</p>
+          <div className="flex items-baseline gap-2 mt-1">
+            <h3 className="text-2xl font-bold text-slate-900">{formatCurrency(noInvoiceTotal)}</h3>
+            <span className="text-xs font-semibold text-amber-600">Atenção requerida</span>
           </div>
         </div>
       </section>
