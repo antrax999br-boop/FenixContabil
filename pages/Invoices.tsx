@@ -373,9 +373,12 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   ) : (
                     <select
                       required
-                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
                       value={newInvoice.client_id}
-                      onChange={e => setNewInvoice({ ...newInvoice, client_id: e.target.value })}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewInvoice(prev => ({ ...prev, client_id: val }));
+                      }}
                     >
                       <option value="" className="text-slate-400">Selecione um cliente...</option>
                       {state.clients.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
@@ -407,15 +410,13 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                     id="original_value"
                     name="original_value"
                     type="text"
-                    inputMode="decimal"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 font-bold"
                     value={newInvoice.original_value}
                     onChange={e => {
-                      const val = e.target.value.replace(',', '.');
-                      if (val === '' || !isNaN(Number(val)) || val === '.') {
-                        setNewInvoice(prev => ({ ...prev, original_value: e.target.value }));
-                      }
+                      const val = e.target.value;
+                      setNewInvoice(prev => ({ ...prev, original_value: val }));
                     }}
+                    placeholder="0,00"
                   />
                 </div>
                 <div>
