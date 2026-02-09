@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { AppState, Payable, InvoiceStatus } from '../types';
 import { formatCurrency } from '../utils/calculations';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface PayablesPageProps {
     state: AppState;
@@ -13,6 +15,17 @@ interface PayablesPageProps {
 const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDelete }) => {
     const [showModal, setShowModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [monthFilter, setMonthFilter] = useState<number | 'ALL'>(new Date().getMonth());
+    const [yearFilter, setYearFilter] = useState<number | 'ALL'>(new Date().getFullYear());
+
+    const months = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear - 1, currentYear, currentYear + 1];
+
     const [newPayable, setNewPayable] = useState({
         description: '',
         value: 0,
@@ -20,9 +33,81 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
         prazo: '',
     });
 
-    const filteredPayables = (state.payables || []).filter(p =>
-        p.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredPayables = (state.payables || []).filter(p => {
+        const matchesSearch = p.description.toLowerCase().includes(searchTerm.toLowerCase());
+        const date = new Date(p.due_date + 'T12:00:00');
+        const matchesMonth = monthFilter === 'ALL' || date.getMonth() === monthFilter;
+        const matchesYear = yearFilter === 'ALL' || date.getFullYear() === yearFilter;
+        return matchesSearch && matchesMonth && matchesYear;
+    }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+
+    const generatePDF = () => {
+        const doc = new jsPDF();
+
+        // Header Background
+        doc.setFillColor(225, 29, 72); // Rose-600
+        doc.rect(0, 0, 210, 40, 'F');
+
+        // Header Text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Relatório de Contas a Pagar', 14, 20);
+
+        doc.setFontSize(10);
+        const periodText = monthFilter === 'ALL' ? `Todo o Ano de ${yearFilter}` : `${months[monthFilter as number]} de ${yearFilter}`;
+        doc.text(`Período: ${periodText}`, 14, 30);
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+
+        // Summary Statistics
+        const totalValue = filteredPayables.reduce((acc, p) => acc + p.value, 0);
+        const paidValue = filteredPayables.filter(p => p.status === InvoiceStatus.PAID).reduce((acc, p) => acc + p.value, 0);
+        const pendingValue = totalValue - paidValue;
+
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(14, 45, 182, 25, 3, 3, 'F');
+
+        doc.setTextColor(51, 65, 85);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('RESUMO FINANCEIRO', 20, 52);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Total Bruto: ${formatCurrency(totalValue)}`, 20, 58);
+        doc.text(`Total Liquidado: ${formatCurrency(paidValue)}`, 80, 58);
+        doc.text(`Total Pendente: ${formatCurrency(pendingValue)}`, 140, 58);
+        doc.text(`Quantidade de Lançamentos: ${filteredPayables.length}`, 20, 64);
+
+        const tableData = filteredPayables.map(p => [
+            p.description,
+            formatCurrency(p.value),
+            new Date(p.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
+            p.prazo || '---',
+            p.payment_date ? new Date(p.payment_date + 'T12:00:00').toLocaleDateString('pt-BR') : '---',
+            p.status === InvoiceStatus.PAID ? 'PAGO' : p.status === InvoiceStatus.OVERDUE ? 'ATRASADO' : 'PENDENTE'
+        ]);
+
+        autoTable(doc, {
+            startY: 75,
+            head: [['Descrição', 'Valor', 'Vencimento', 'Prazo', 'Pagamento', 'Status']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [225, 29, 72], textColor: [255, 255, 255] },
+            columnStyles: {
+                1: { halign: 'right', fontStyle: 'bold' },
+                5: { halign: 'center' }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 5) {
+                    const val = data.cell.text[0];
+                    if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
+                    if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
+                    if (val === 'PENDENTE') data.cell.styles.textColor = [217, 119, 6];
+                }
+            }
+        });
+
+        doc.save(`Contas_a_Pagar_${periodText.replace(/ /g, '_')}.pdf`);
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,17 +133,26 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
                     </nav>
                     <h2 className="text-3xl font-black tracking-tight text-slate-900">Contas a Pagar</h2>
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
-                >
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Nova Conta
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={generatePDF}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"
+                    >
+                        <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                        Exportar PDF
+                    </button>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
+                    >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        Nova Conta
+                    </button>
+                </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
-                <div className="relative max-w-sm">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex items-center justify-between flex-wrap gap-4">
+                <div className="relative max-w-sm flex-1">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
                     <input
                         className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
@@ -67,6 +161,30 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <select
+                        className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-rose-500/20 text-slate-900"
+                        value={monthFilter}
+                        onChange={e => setMonthFilter(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value))}
+                    >
+                        <option value="ALL">Todo o Ano</option>
+                        {months.map((m, idx) => (
+                            <option key={m} value={idx}>{m}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        className="bg-slate-50 border-none rounded-lg py-2 text-sm focus:ring-2 focus:ring-rose-500/20 text-slate-900"
+                        value={yearFilter}
+                        onChange={e => setYearFilter(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value))}
+                    >
+                        <option value="ALL">Todos os Anos</option>
+                        {years.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -107,10 +225,10 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase ${p.status === InvoiceStatus.PAID
-                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                                                    : p.status === InvoiceStatus.OVERDUE
-                                                        ? 'bg-rose-100 text-rose-700 border-rose-200'
-                                                        : 'bg-amber-100 text-amber-700 border-amber-200'
+                                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                                : p.status === InvoiceStatus.OVERDUE
+                                                    ? 'bg-rose-100 text-rose-700 border-rose-200'
+                                                    : 'bg-amber-100 text-amber-700 border-amber-200'
                                                 }`}>
                                                 {p.status === InvoiceStatus.PAID ? 'Pago' : p.status === InvoiceStatus.OVERDUE ? 'Atrasado' : 'Pendente'}
                                             </span>
