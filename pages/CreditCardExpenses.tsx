@@ -157,7 +157,9 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                             className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm"
                         >
                             {generateMonthOptions().map(m => (
-                                <option key={m} value={m}>{m}</option>
+                                <option key={m} value={m}>
+                                    {new Date(m.replace('.', '-') + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -180,7 +182,9 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
             {/* Matrix View (like Excel) */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
                 <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <h3 className="font-black text-slate-700 uppercase tracking-widest text-xs">Lançamentos em {selectedMonth}</h3>
+                    <h3 className="font-black text-slate-700 uppercase tracking-widest text-xs">
+                        Lançamentos em {new Date(selectedMonth.replace('.', '-') + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                    </h3>
                     <div className="flex flex-wrap gap-2">
                         {cards.map(card => {
                             const isPaid = isMonthPaid(selectedMonth, card);
@@ -224,7 +228,9 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                                     <td colSpan={8} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-2">
                                             <span className="material-symbols-outlined text-4xl text-slate-200">credit_card_off</span>
-                                            <p className="text-slate-400 font-medium">Nenhum gasto registrado para {selectedMonth}</p>
+                                            <p className="text-slate-400 font-medium">
+                                                Nenhum gasto registrado para {new Date(selectedMonth.replace('.', '-') + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                                            </p>
                                             <p className="text-slate-300 text-xs">Clique em "Nova Compra" para realizar o primeiro lançamento.</p>
                                         </div>
                                     </td>
