@@ -38,6 +38,7 @@ export interface Invoice {
   days_overdue: number;
   final_value: number;
   payment_date?: string | null;
+  individual_name?: string;
   created_at?: string;
 }
 

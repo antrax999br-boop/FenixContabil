@@ -275,14 +275,11 @@ const App: React.FC = () => {
     }
   };
 
-  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'>) => {
+  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'> & { individual_name?: string }) => {
     // Initial calculation for insertion
     const client = state.clients.find(c => c.id === invoiceData.client_id);
-    if (!client) return;
 
-    // We can insert just the basics and let the DB defaults handle status, 
-    // or calculate explicitly.
-    // The DB has defaults, but let's be explicit to match local logic.
+    // If no client, we use default values for status/value (no interest)
     const tempInv = {
       ...invoiceData,
       id: 'temp',
@@ -290,24 +287,31 @@ const App: React.FC = () => {
       days_overdue: 0,
       final_value: invoiceData.original_value
     };
-    const calculated = calculateInvoiceStatusAndValues(tempInv, client);
+
+    const calculated = client
+      ? calculateInvoiceStatusAndValues(tempInv, client)
+      : tempInv;
 
     const { data, error } = await supabase
       .from('invoices')
       .insert([{
-        client_id: invoiceData.client_id,
+        client_id: invoiceData.client_id || null,
         invoice_number: invoiceData.invoice_number,
         original_value: invoiceData.original_value,
         due_date: invoiceData.due_date,
         status: calculated.status,
         days_overdue: calculated.days_overdue,
-        final_value: calculated.final_value
+        final_value: calculated.final_value,
+        individual_name: invoiceData.individual_name
       }])
       .select()
       .single();
 
     if (data && !error) {
       setState(prev => ({ ...prev, invoices: [...prev.invoices, data] }));
+    } else if (error) {
+      console.error(error);
+      alert('Erro ao adicionar boleto: ' + error.message);
     }
   };
 

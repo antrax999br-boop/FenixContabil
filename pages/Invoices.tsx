@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/calculations';
 
 interface InvoicesPageProps {
   state: AppState;
-  onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'>) => void;
+  onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'> & { individual_name?: string }) => void;
   onPay: (id: string) => void;
   onDelete: (id: string) => void;
   initialFilter?: InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET';
@@ -20,6 +20,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
   const [newInvoice, setNewInvoice] = useState({
     invoice_number: '',
     client_id: '',
+    individual_name: '',
     original_value: 0,
     due_date: new Date().toISOString().split('T')[0]
   });
@@ -58,8 +59,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     const matchesYear = yearFilter === 'ALL' || invoiceDate.getFullYear() === yearFilter;
 
     const searchLower = searchTerm.toLowerCase();
+    const clientName = client?.name || i.individual_name || '';
     const matchesSearch = searchTerm === '' ||
-      client?.name.toLowerCase().includes(searchLower) ||
+      clientName.toLowerCase().includes(searchLower) ||
       i.invoice_number?.toLowerCase().includes(searchLower);
 
     return matchesStatus && matchesMonth && matchesYear && matchesSearch;
@@ -84,7 +86,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newInvoice.client_id) return alert('Selecione um cliente');
+    if (regType !== 'INTERNET' && !newInvoice.client_id) return alert('Selecione um cliente');
+    if (regType === 'INTERNET' && !newInvoice.individual_name) return alert('Informe o nome/serviço para cobrança');
 
     let finalNumber = newInvoice.invoice_number;
     if (regType === 'SEM_NOTA') finalNumber = 'S/N';
@@ -97,7 +100,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
       invoice_number: finalNumber
     });
 
-    setNewInvoice({ invoice_number: '', client_id: '', original_value: 0, due_date: new Date().toISOString().split('T')[0] });
+    setNewInvoice({ invoice_number: '', client_id: '', individual_name: '', original_value: 0, due_date: new Date().toISOString().split('T')[0] });
     setShowModal(false);
   };
 
@@ -261,10 +264,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
-                              {client?.name.substring(0, 2) || '??'}
+                              {(client?.name || inv.individual_name || '??').substring(0, 2)}
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-slate-900">{client?.name}</p>
+                              <p className="text-sm font-semibold text-slate-900">{client?.name || inv.individual_name || 'Diversos'}</p>
                               <p className="text-xs text-slate-500">ID: {getDisplayNumber(inv.invoice_number)}</p>
                             </div>
                           </div>
@@ -352,16 +355,28 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente</label>
-                  <select
-                    required
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
-                    value={newInvoice.client_id}
-                    onChange={e => setNewInvoice({ ...newInvoice, client_id: e.target.value })}
-                  >
-                    <option value="" className="text-slate-400">Selecione um cliente...</option>
-                    {state.clients.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
-                  </select>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    {regType === 'INTERNET' ? 'Nome / Descrição do Cobrado' : 'Cliente'}
+                  </label>
+                  {regType === 'INTERNET' ? (
+                    <input
+                      required
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900 placeholder:text-slate-400 font-bold"
+                      value={newInvoice.individual_name}
+                      onChange={e => setNewInvoice({ ...newInvoice, individual_name: e.target.value })}
+                      placeholder="Ex: Hunter (Internet Mensal)"
+                    />
+                  ) : (
+                    <select
+                      required
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
+                      value={newInvoice.client_id}
+                      onChange={e => setNewInvoice({ ...newInvoice, client_id: e.target.value })}
+                    >
+                      <option value="" className="text-slate-400">Selecione um cliente...</option>
+                      {state.clients.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
+                    </select>
+                  )}
                 </div>
 
                 {regType !== 'SEM_NOTA' && (
