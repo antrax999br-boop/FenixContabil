@@ -573,6 +573,61 @@ const App: React.FC = () => {
     }
   };
 
+  const addCreditCardExpense = async (expense: Omit<CreditCardExpense, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('credit_card_expenses').insert([expense]).select().single();
+    if (data && !error) {
+      setState(prev => ({ ...prev, creditCardExpenses: [data, ...prev.creditCardExpenses] }));
+    } else {
+      console.error(error);
+      alert('Erro ao adicionar compra no cartão.');
+    }
+  };
+
+  const updateCreditCardExpense = async (expense: CreditCardExpense) => {
+    const { id, created_at, ...updateData } = expense;
+    const { error } = await supabase.from('credit_card_expenses').update(updateData).eq('id', id);
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        creditCardExpenses: prev.creditCardExpenses.map(e => e.id === id ? expense : e)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao atualizar compra.');
+    }
+  };
+
+  const deleteCreditCardExpense = async (id: string) => {
+    const { error } = await supabase.from('credit_card_expenses').delete().eq('id', id);
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        creditCardExpenses: prev.creditCardExpenses.filter(e => e.id !== id)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao excluir compra.');
+    }
+  };
+
+  const toggleCreditCardPayment = async (yearMonth: string, card: string, isPaid: boolean) => {
+    const existing = state.creditCardPayments.find(p => p.year_month === yearMonth && p.card === card);
+    if (existing) {
+      const { error } = await supabase.from('credit_card_payments').update({ is_paid: isPaid }).eq('id', existing.id);
+      if (!error) {
+        setState(prev => ({
+          ...prev,
+          creditCardPayments: prev.creditCardPayments.map(p => p.id === existing.id ? { ...p, is_paid: isPaid } : p)
+        }));
+      }
+    } else {
+      const { data, error } = await supabase.from('credit_card_payments').insert([{ year_month: yearMonth, card, is_paid: isPaid }]).select().single();
+      if (data && !error) {
+        setState(prev => ({ ...prev, creditCardPayments: [...prev.creditCardPayments, data] }));
+      }
+    }
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -591,6 +646,15 @@ const App: React.FC = () => {
       case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="INTERNET" />;
       case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={markPayablePaid} onDelete={deletePayable} />;
       case 'pagamentos-diarios': return <DailyPaymentsPage dailyPayments={state.dailyPayments} onAdd={addDailyPayment} onUpdate={updateDailyPayment} onDelete={deleteDailyPayment} />;
+      case 'controle_cartao':
+        return <CreditCardExpensesPage
+          expenses={state.creditCardExpenses}
+          payments={state.creditCardPayments}
+          onAddExpense={addCreditCardExpense}
+          onUpdateExpense={updateCreditCardExpense}
+          onDeleteExpense={deleteCreditCardExpense}
+          onTogglePayment={toggleCreditCardPayment}
+        />;
       case 'relatorios': return <ReportsPage state={state} />;
       case 'calendario':
         return <CalendarPage

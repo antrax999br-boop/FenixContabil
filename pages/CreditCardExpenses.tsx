@@ -216,8 +216,12 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                         <tbody className="divide-y divide-slate-100">
                             {activeItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400 font-medium">
-                                        Nenhuma compra ativa para este período.
+                                    <td colSpan={8} className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <span className="material-symbols-outlined text-4xl text-slate-200">credit_card_off</span>
+                                            <p className="text-slate-400 font-medium">Nenhum gasto registrado para {selectedMonth}</p>
+                                            <p className="text-slate-300 text-xs">Clique em "Nova Compra" para realizar o primeiro lançamento.</p>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
