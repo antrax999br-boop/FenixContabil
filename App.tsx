@@ -331,6 +331,29 @@ const App: React.FC = () => {
     }
   };
 
+  const updateInvoice = async (invoice: Invoice) => {
+    const { id, created_at, days_overdue, final_value, ...updateData } = invoice;
+    const { data, error } = await supabase
+      .from('invoices')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (data && !error) {
+      const client = state.clients.find(c => c.id === data.client_id);
+      const updated = client ? calculateInvoiceStatusAndValues(data, client) : data;
+
+      setState(prev => ({
+        ...prev,
+        invoices: prev.invoices.map(inv => inv.id === id ? updated : inv)
+      }));
+    } else if (error) {
+      console.error(error);
+      alert('Erro ao atualizar boleto: ' + error.message);
+    }
+  };
+
   const deleteInvoice = async (id: string) => {
     const { error } = await supabase
       .from('invoices')
@@ -671,10 +694,11 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'inicio': return <Dashboard state={state} onTabChange={setActiveTab} />;
       case 'clientes': return <ClientsPage clients={state.clients} onAdd={addClient} onUpdate={updateClient} onDelete={deleteClient} />;
-      case 'notas': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} />;
-      case 'notas-ativas': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="ATIVOS" />;
-      case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
-      case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onDelete={deleteInvoice} initialFilter="INTERNET" />;
+      case 'notas': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} />;
+      case 'notas-ativas': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="ATIVOS" />;
+      case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
+      case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="INTERNET" />;
+      case 'notas-aguardando': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="AGUARDANDO" />;
       case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={markPayablePaid} onUpdate={updatePayable} onDelete={deletePayable} />;
       case 'pagamentos-diarios': return <DailyPaymentsPage dailyPayments={state.dailyPayments} onAdd={addDailyPayment} onUpdate={updateDailyPayment} onDelete={deleteDailyPayment} />;
       case 'controle_cartao':

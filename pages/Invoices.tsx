@@ -7,13 +7,15 @@ interface InvoicesPageProps {
   state: AppState;
   onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'> & { individual_name?: string }) => void;
   onPay: (id: string) => void;
+  onUpdate: (invoice: Invoice) => void;
   onDelete: (id: string) => void;
-  initialFilter?: InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET';
+  initialFilter?: InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET' | 'AGUARDANDO';
 }
 
-const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDelete, initialFilter }) => {
+const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpdate, onDelete, initialFilter }) => {
   const [showModal, setShowModal] = useState(false);
-  const [filter, setFilter] = useState<InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET'>(initialFilter || 'ALL');
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [filter, setFilter] = useState<InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET' | 'AGUARDANDO'>(initialFilter || 'ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState<number | 'ALL'>(new Date().getMonth());
   const [yearFilter, setYearFilter] = useState<number | 'ALL'>(new Date().getFullYear());
@@ -22,7 +24,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     client_id: '',
     individual_name: '',
     original_value: '',
-    due_date: new Date().toISOString().split('T')[0]
+    due_date: new Date().toISOString().split('T')[0],
+    status: InvoiceStatus.NOT_PAID
   });
 
   const months = [
@@ -36,9 +39,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
   const filteredInvoices = state.invoices.filter(i => {
     const client = state.clients.find(c => c.id === i.client_id);
 
-    const isInternet = i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id);
-    const isSemNota = !isInternet && (!i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
-    const isStandard = !isInternet && !isSemNota;
+    const isAguardando = i.invoice_number?.startsWith('AGU-');
+    const isInternet = !isAguardando && (i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id));
+    const isSemNota = !isAguardando && !isInternet && (!i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
+    const isStandard = !isAguardando && !isInternet && !isSemNota;
 
     let matchesStatus = false;
     if (filter === 'ALL') {
@@ -50,6 +54,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
       matchesStatus = isSemNota;
     } else if (filter === 'INTERNET') {
       matchesStatus = isInternet;
+    } else if (filter === 'AGUARDANDO') {
+      matchesStatus = isAguardando;
     } else {
       matchesStatus = i.status === filter;
     }
@@ -80,13 +86,15 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
   const getDefaultType = () => {
     if (filter === 'INTERNET') return 'INTERNET';
     if (filter === 'SEM_NOTA') return 'SEM_NOTA';
+    if (filter === 'AGUARDANDO') return 'AGUARDANDO';
     return 'STANDARD';
   };
 
-  const [regType, setRegType] = useState<'STANDARD' | 'INTERNET' | 'SEM_NOTA'>(getDefaultType());
+  const [regType, setRegType] = useState<'STANDARD' | 'INTERNET' | 'SEM_NOTA' | 'AGUARDANDO'>(getDefaultType());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (regType !== 'INTERNET' && !newInvoice.client_id) return alert('Selecione um cliente');
     if (regType === 'INTERNET' && !newInvoice.individual_name) return alert('Informe o nome/serviço para cobrança');
 
@@ -94,22 +102,65 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
     if (regType === 'SEM_NOTA') finalNumber = 'S/N';
     else if (regType === 'INTERNET' && !finalNumber.startsWith('INT-')) {
       finalNumber = 'INT-' + (finalNumber || 'AUTOGEN');
+    } else if (regType === 'AGUARDANDO' && !finalNumber.startsWith('AGU-')) {
+      finalNumber = 'AGU-' + (finalNumber || 'PEND');
     }
 
-    onAdd({
-      ...newInvoice,
-      original_value: parseFloat(newInvoice.original_value) || 0,
-      invoice_number: finalNumber
-    });
+    if (editingInvoice) {
+      onUpdate({
+        ...editingInvoice,
+        client_id: newInvoice.client_id,
+        invoice_number: finalNumber,
+        original_value: parseFloat(newInvoice.original_value) || 0,
+        due_date: newInvoice.due_date,
+        status: newInvoice.status,
+        individual_name: newInvoice.individual_name,
+        payment_date: newInvoice.status === InvoiceStatus.PAID ? (editingInvoice.payment_date || new Date().toISOString()) : null
+      });
+    } else {
+      onAdd({
+        ...newInvoice,
+        original_value: parseFloat(newInvoice.original_value) || 0,
+        invoice_number: finalNumber,
+      });
+    }
 
-    setNewInvoice({ invoice_number: '', client_id: '', individual_name: '', original_value: '', due_date: new Date().toISOString().split('T')[0] });
+    setNewInvoice({
+      invoice_number: '',
+      client_id: '',
+      individual_name: '',
+      original_value: '',
+      due_date: new Date().toISOString().split('T')[0],
+      status: InvoiceStatus.NOT_PAID
+    });
+    setEditingInvoice(null);
     setShowModal(false);
+  };
+
+  const openEditModal = (inv: Invoice) => {
+    let type: 'STANDARD' | 'INTERNET' | 'SEM_NOTA' | 'AGUARDANDO' = 'STANDARD';
+    if (inv.invoice_number?.startsWith('AGU-')) type = 'AGUARDANDO';
+    else if (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id)) type = 'INTERNET';
+    else if (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') type = 'SEM_NOTA';
+
+    setRegType(type);
+    setNewInvoice({
+      invoice_number: getDisplayNumber(inv.invoice_number),
+      client_id: inv.client_id || '',
+      individual_name: inv.individual_name || '',
+      original_value: inv.original_value.toString(),
+      due_date: inv.due_date,
+      status: inv.status
+    });
+    setEditingInvoice(inv);
+    setShowModal(true);
   };
 
   // Helper to get display number (hide technical prefixes)
   const getDisplayNumber = (num?: string) => {
     if (!num) return 'S/N';
     if (num.startsWith('INT-')) return num.replace('INT-', '');
+    if (num.startsWith('AGU-')) return num.replace('AGU-', '');
     return num;
   };
 
@@ -211,6 +262,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
               <option value="ATIVOS">🔥 Boletos Iniciais</option>
               <option value="SEM_NOTA">📄 Boletos Sem Nota</option>
               <option value="INTERNET">🌐 Boletos Internet</option>
+              <option value="AGUARDANDO">⏳ Aguardando Nota</option>
               <option value={InvoiceStatus.PAID}>Somente Pagos</option>
               <option value={InvoiceStatus.NOT_PAID}>Somente Pendentes</option>
               <option value={InvoiceStatus.OVERDUE}>Somente Atrasados</option>
@@ -233,6 +285,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Boletos Ativos</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Boletos S/ Nota</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Boletos Internet</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Aguardando Nota</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Valor Final</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Ações</th>
               </tr>
@@ -242,7 +295,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                 <React.Fragment key={monthIdx}>
                   {monthFilter === 'ALL' && (
                     <tr className="bg-slate-100/50">
-                      <td colSpan={8} className="px-6 py-2.5">
+                      <td colSpan={9} className="px-6 py-2.5">
                         <div className="flex items-center gap-2">
                           <span className="material-symbols-outlined text-sm text-primary">calendar_month</span>
                           <span className="text-xs font-black text-slate-700 uppercase tracking-widest">
@@ -257,9 +310,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   )}
                   {groupedInvoices[monthIdx].map(inv => {
                     const client = state.clients.find(c => c.id === inv.client_id);
-                    const isInternet = inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id);
-                    const isSemNota = !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
-                    const isStandard = !isInternet && !isSemNota;
+                    const isAguardando = inv.invoice_number?.startsWith('AGU-');
+                    const isInternet = !isAguardando && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
+                    const isSemNota = !isAguardando && !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
+                    const isStandard = !isAguardando && !isInternet && !isSemNota;
 
                     return (
                       <tr key={inv.id} className="hover:bg-primary/5 transition-colors group">
@@ -287,9 +341,19 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                         <td className="px-6 py-4 text-center">
                           {isInternet ? renderStatusBadge(inv, 'language', 'text-blue-500') : <span className="text-slate-300">-</span>}
                         </td>
+                        <td className="px-6 py-4 text-center">
+                          {isAguardando ? renderStatusBadge(inv, 'hourglass_empty', 'text-purple-500') : <span className="text-slate-300">-</span>}
+                        </td>
                         <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">{formatCurrency(inv.final_value)}</td>
                         <td className="px-6 py-4">
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openEditModal(inv)}
+                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <span className="material-symbols-outlined text-lg">edit</span>
+                            </button>
                             {inv.status !== InvoiceStatus.PAID && (
                               <button
                                 onClick={() => onPay(inv.id)}
@@ -322,8 +386,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-lg text-slate-800">Novo Registro de Boleto</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <h3 className="font-bold text-lg text-slate-800">{editingInvoice ? 'Editar Registro' : 'Novo Registro de Boleto'}</h3>
+              <button onClick={() => { setShowModal(false); setEditingInvoice(null); }} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
@@ -331,7 +395,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Tipo de Registro</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setRegType('STANDARD')}
@@ -352,6 +416,13 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                       className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${regType === 'SEM_NOTA' ? 'bg-amber-500 text-white border-amber-500' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
                     >
                       Sem Nota
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegType('AGUARDANDO')}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${regType === 'AGUARDANDO' ? 'bg-purple-600 text-white border-purple-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                    >
+                      Aguardando Nota
                     </button>
                   </div>
                 </div>
@@ -432,11 +503,30 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                     onChange={e => setNewInvoice(prev => ({ ...prev, due_date: e.target.value }))}
                   />
                 </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Status</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.NOT_PAID }))}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status !== InvoiceStatus.PAID ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                    >
+                      EM ABERTO
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.PAID }))}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status === InvoiceStatus.PAID ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                    >
+                      PAGO
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { setShowModal(false); setEditingInvoice(null); }}
                   className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
                 >
                   Cancelar
@@ -445,7 +535,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onDele
                   type="submit"
                   className="flex-1 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20"
                 >
-                  Cadastrar Registro
+                  {editingInvoice ? 'Salvar Alterações' : 'Cadastrar Registro'}
                 </button>
               </div>
             </form>
