@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { DailyPayment } from '../types';
 import { formatCurrency } from '../utils/calculations';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface DailyPaymentsPageProps {
     dailyPayments: DailyPayment[];
@@ -119,6 +121,71 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
 
     const monthOptions = generateMonthOptions();
 
+    const generatePDF = () => {
+        const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+        const monthLabel = selectedMonth === 'all'
+            ? 'Todos os Meses'
+            : new Date(selectedMonth + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
+
+        // Header Background
+        doc.setFillColor(15, 23, 42); // Navy 900
+        doc.rect(0, 0, 297, 40, 'F');
+
+        // Header Text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Relatório de Pagamentos Diários', 14, 20);
+
+        doc.setFontSize(10);
+        doc.text(`Referência: ${monthLabel}`, 14, 30);
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 283, 30, { align: 'right' });
+
+        const tableBody = filteredPayments.map(p => {
+            const row: any[] = [
+                new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+                p.description || ''
+            ];
+
+            // Add each category value
+            categoryFields.forEach(field => {
+                const val = p[field];
+                if (!val) {
+                    row.push('');
+                } else if (!isNaN(extractValue(val)) && extractValue(val) > 0 && String(val).match(/^[0-9,.]+$/)) {
+                    row.push(formatCurrency(extractValue(val)));
+                } else {
+                    row.push(val);
+                }
+            });
+
+            row.push(formatCurrency(calculateRowTotal(p)));
+            return row;
+        });
+
+        const headers = [['Data', 'Descrição', ...categoryFields.map(f => categoryLabels[f]), 'TOTAL']];
+
+        autoTable(doc, {
+            startY: 50,
+            head: headers,
+            body: tableBody,
+            theme: 'grid',
+            headStyles: { fillColor: [37, 99, 235], fontSize: 7 },
+            styles: { fontSize: 7, cellPadding: 2 },
+            columnStyles: {
+                0: { cellWidth: 20 },
+                1: { cellWidth: 40 },
+                [headers[0].length - 1]: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+
+        doc.setFontSize(12);
+        doc.setTextColor(30, 41, 59);
+        doc.text(`TOTAL GERAL NO PERÍODO: ${formatCurrency(totalValue)}`, 283, (doc as any).lastAutoTable.finalY + 15, { align: 'right' });
+
+        doc.save(`Pagamentos_Diarios_${selectedMonth.replace('-', '_')}.pdf`);
+    };
+
     return (
         <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -132,6 +199,14 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center gap-4">
+                    <button
+                        onClick={generatePDF}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm h-[52px]"
+                    >
+                        <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                        Relatório PDF
+                    </button>
+
                     <div className="flex flex-col">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 ml-1">Mês de Referência</label>
                         <select
