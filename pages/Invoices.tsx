@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { AppState, Invoice, InvoiceStatus } from '../types';
 import { formatCurrency } from '../utils/calculations';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface InvoicesPageProps {
   state: AppState;
@@ -187,6 +189,65 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     );
   };
 
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const title = filter === 'AGUARDANDO' ? 'Relatório: Aguardando Nota Do Cliente' : 'Relatório de Boletos e Registros';
+    const period = `${monthFilter === 'ALL' ? 'Ano Todo' : months[monthFilter]} / ${yearFilter === 'ALL' ? 'Todos os Anos' : yearFilter}`;
+
+    // Header Background
+    doc.setFillColor(15, 23, 42); // Navy 900
+    doc.rect(0, 0, 210, 40, 'F');
+
+    // Header Text
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(255, 255, 255);
+    doc.text(title, 14, 20);
+
+    doc.setFontSize(10);
+    doc.text(`Período: ${period.toUpperCase()}`, 14, 30);
+    doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+
+    const tableData = filteredInvoices.map(inv => {
+      const client = state.clients.find(c => c.id === inv.client_id);
+      return [
+        client?.name || inv.individual_name || 'Diversos',
+        getDisplayNumber(inv.invoice_number),
+        new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
+        inv.status,
+        formatCurrency(inv.original_value),
+        formatCurrency(inv.final_value)
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 50,
+      head: [['Cliente', 'ID/Número', 'Vencimento', 'Status', 'Vlr. Original', 'Vlr. Final']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255] },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        4: { halign: 'right' },
+        5: { halign: 'right', fontStyle: 'bold' }
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const val = data.cell.text[0];
+          if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
+          else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
+        }
+      }
+    });
+
+    const total = filteredInvoices.reduce((acc, inv) => acc + inv.final_value, 0);
+    doc.setFontSize(12);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`TOTAL GERAL: ${formatCurrency(total)}`, 196, (doc as any).lastAutoTable.finalY + 15, { align: 'right' });
+
+    doc.save(`Relatorio_Fenix_${filter}_${period.replace(/\s/g, '')}.pdf`);
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -196,12 +257,17 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
             <span className="material-symbols-outlined text-xs">chevron_right</span>
             <span className="text-primary font-medium">Boletos</span>
           </nav>
-          <h2 className="text-3xl font-black tracking-tight text-slate-900">Boletos e Registros</h2>
+          <h2 className="text-3xl font-black tracking-tight text-slate-900">
+            {filter === 'AGUARDANDO' ? 'Aguardando Nota Do Cliente' : 'Boletos e Registros'}
+          </h2>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
-            <span className="material-symbols-outlined text-sm">download</span>
-            Exportar Dados
+          <button
+            onClick={generatePDF}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+            Emitir Relatório PDF
           </button>
           <button
             onClick={() => {
