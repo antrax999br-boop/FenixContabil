@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { CreditCardExpense, CreditCardPayment } from '../types';
 import { formatCurrency } from '../utils/calculations';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface CreditCardExpensesPageProps {
     expenses: CreditCardExpense[];
@@ -136,6 +138,94 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
         return Array.from(months).sort().reverse();
     };
 
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        const readableMonth = new Date(selectedMonth.replace('.', '-') + '-02-01').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+        // Header Background
+        doc.setFillColor(37, 99, 235); // Blue-600
+        doc.rect(0, 0, 210, 40, 'F');
+
+        // Header Text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Fatura de Cartão de Crédito', 14, 20);
+
+        doc.setFontSize(10);
+        doc.text(`Referência: ${readableMonth.toUpperCase()}`, 14, 30);
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+
+        // Summary Statistics by Card
+        let currentY = 50;
+        doc.setFontSize(12);
+        doc.setTextColor(30, 41, 59);
+        doc.text('RESUMO POR CARTÃO', 14, currentY);
+        currentY += 10;
+
+        const cardSummaries = cards.map(card => {
+            const cardItems = activeItems.filter(i => i.card === card);
+            const total = cardItems.reduce((sum, i) => sum + i.monthlyValue, 0);
+            const isPaid = isMonthPaid(selectedMonth, card);
+            return { card, total, isPaid, count: cardItems.length };
+        }).filter(s => s.count > 0);
+
+        autoTable(doc, {
+            startY: currentY,
+            head: [['Cartão', 'Quantidade de Itens', 'Total na Fatura', 'Status']],
+            body: cardSummaries.map(s => [
+                s.card,
+                s.count,
+                formatCurrency(Math.abs(s.total)),
+                s.isPaid ? 'PAGO' : 'EM ABERTO'
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [37, 99, 235] },
+            columnStyles: { 2: { halign: 'right' }, 3: { halign: 'center' } },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 3) {
+                    const val = data.cell.text[0];
+                    if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
+                    else data.cell.styles.textColor = [235, 37, 37];
+                }
+            }
+        });
+
+        // Detail Table
+        doc.setFontSize(12);
+        doc.setTextColor(30, 41, 59);
+        doc.text('DETALHAMENTO DE COMPRAS', 14, (doc as any).lastAutoTable.finalY + 15);
+
+        const tableData = activeItems.map(item => [
+            new Date(item.purchase_date + 'T12:00:00').toLocaleDateString('pt-BR'),
+            item.description,
+            item.card.toUpperCase(),
+            `${item.currentInstallment}/${item.total_installments}`,
+            formatCurrency(Math.abs(item.monthlyValue)),
+            formatCurrency(item.balance)
+        ]);
+
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Data Compra', 'Descrição', 'Cartão', 'Parcela', 'Vlr. Parcela', 'Saldo Devedor']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255] },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                4: { halign: 'right', fontStyle: 'bold' },
+                5: { halign: 'right' }
+            }
+        });
+
+        const totalValue = Math.abs(totalMonthlyBill);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`VALOR TOTAL DA FATURA: ${formatCurrency(totalValue)}`, 196, (doc as any).lastAutoTable.finalY + 15, { align: 'right' });
+
+        doc.save(`Fatura_Cartao_${selectedMonth.replace('.', '_')}.pdf`);
+    };
+
     return (
         <div className="max-w-7xl mx-auto pb-20">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -149,6 +239,14 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center gap-4">
+                    <button
+                        onClick={generatePDF}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm h-[52px]"
+                    >
+                        <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                        Relatório PDF
+                    </button>
+
                     <div className="flex flex-col">
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 ml-1">Fatura de Referência</label>
                         <select
