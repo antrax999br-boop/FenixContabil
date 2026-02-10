@@ -8,12 +8,14 @@ import autoTable from 'jspdf-autotable';
 interface PayablesPageProps {
     state: AppState;
     onAdd: (payable: Omit<Payable, 'id' | 'status'>) => void;
+    onUpdate: (payable: Payable) => void;
     onPay: (id: string) => void;
     onDelete: (id: string) => void;
 }
 
-const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDelete }) => {
+const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpdate, onDelete }) => {
     const [showModal, setShowModal] = useState(false);
+    const [editingPayable, setEditingPayable] = useState<Payable | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [monthFilter, setMonthFilter] = useState<number | 'ALL'>(new Date().getMonth());
     const [yearFilter, setYearFilter] = useState<number | 'ALL'>(new Date().getFullYear());
@@ -32,6 +34,28 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
         due_date: new Date().toISOString().split('T')[0],
         prazo: '',
     });
+
+    const handleOpenEdit = (payable: Payable) => {
+        setEditingPayable(payable);
+        setNewPayable({
+            description: payable.description,
+            value: payable.value,
+            due_date: payable.due_date,
+            prazo: payable.prazo || '',
+        });
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditingPayable(null);
+        setNewPayable({
+            description: '',
+            value: 0,
+            due_date: new Date().toISOString().split('T')[0],
+            prazo: '',
+        });
+    };
 
     const filteredPayables = (state.payables || []).filter(p => {
         const matchesSearch = p.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -112,14 +136,17 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPayable.description) return alert('Insira uma descrição');
-        onAdd(newPayable);
-        setNewPayable({
-            description: '',
-            value: 0,
-            due_date: new Date().toISOString().split('T')[0],
-            prazo: '',
-        });
-        setShowModal(false);
+
+        if (editingPayable) {
+            onUpdate({
+                ...editingPayable,
+                ...newPayable
+            });
+        } else {
+            onAdd(newPayable);
+        }
+
+        handleCloseModal();
     };
 
     return (
@@ -245,6 +272,13 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
                                                     </button>
                                                 )}
                                                 <button
+                                                    onClick={() => handleOpenEdit(p)}
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">edit</span>
+                                                </button>
+                                                <button
                                                     onClick={() => onDelete(p.id)}
                                                     className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                                                     title="Excluir"
@@ -265,8 +299,10 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="px-6 py-4 bg-rose-600 text-white flex items-center justify-between">
-                            <h3 className="font-black uppercase tracking-tight">Nova Conta a Pagar</h3>
-                            <button onClick={() => setShowModal(false)} className="hover:rotate-90 transition-transform">
+                            <h3 className="font-black uppercase tracking-tight">
+                                {editingPayable ? 'Editar Conta' : 'Nova Conta a Pagar'}
+                            </h3>
+                            <button onClick={handleCloseModal} className="hover:rotate-90 transition-transform">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
@@ -320,7 +356,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onDele
                                     type="submit"
                                     className="w-full py-3 bg-rose-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 active:scale-95"
                                 >
-                                    Confirmar Cadastro
+                                    {editingPayable ? 'Salvar Alterações' : 'Confirmar Cadastro'}
                                 </button>
                             </div>
                         </form>
