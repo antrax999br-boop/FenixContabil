@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS public.employees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
+    job_title TEXT, -- Function/Position
     meal_voucher_day DECIMAL(10, 2) DEFAULT 0,
     transport_voucher_day DECIMAL(10, 2) DEFAULT 0,
     payment_method TEXT, -- "Pix", "Conta Bancária", etc.

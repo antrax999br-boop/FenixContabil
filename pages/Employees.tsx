@@ -28,6 +28,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
 
     const [newEmployee, setNewEmployee] = useState({
         name: '',
+        job_title: '',
         meal_voucher_day: '',
         transport_voucher_day: '',
         payment_method: '',
@@ -58,6 +59,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         e.preventDefault();
         const employeeData = {
             name: newEmployee.name,
+            job_title: newEmployee.job_title,
             meal_voucher_day: parseFloat(newEmployee.meal_voucher_day) || 0,
             transport_voucher_day: parseFloat(newEmployee.transport_voucher_day) || 0,
             payment_method: newEmployee.payment_method,
@@ -73,6 +75,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
 
         setNewEmployee({
             name: '',
+            job_title: '',
             meal_voucher_day: '',
             transport_voucher_day: '',
             payment_method: '',
@@ -86,6 +89,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
     const openEditModal = (employee: Employee) => {
         setNewEmployee({
             name: employee.name,
+            job_title: employee.job_title || '',
             meal_voucher_day: employee.meal_voucher_day.toString(),
             transport_voucher_day: employee.transport_voucher_day.toString(),
             payment_method: employee.payment_method || '',
@@ -140,6 +144,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                         setEditingEmployee(null);
                         setNewEmployee({
                             name: '',
+                            job_title: '',
                             meal_voucher_day: '',
                             transport_voucher_day: '',
                             payment_method: '',
@@ -223,7 +228,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-bold text-slate-900">{emp.name}</p>
-                                                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">Ativo no Sistema</p>
+                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{emp.job_title || 'Sem Função'}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -334,16 +339,28 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
 
                         <form onSubmit={handleEmployeeSubmit} className="p-8 space-y-6">
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Nome Completo</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none transition-all font-bold text-slate-800 placeholder:text-slate-300"
-                                        value={newEmployee.name}
-                                        onChange={e => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
-                                        placeholder="Ex: João da Silva"
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Nome Completo</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none transition-all font-bold text-slate-800 placeholder:text-slate-300"
+                                            value={newEmployee.name}
+                                            onChange={e => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                                            placeholder="Ex: João da Silva"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Função / Cargo</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none transition-all font-bold text-slate-800 placeholder:text-slate-300"
+                                            value={newEmployee.job_title}
+                                            onChange={e => setNewEmployee(prev => ({ ...prev, job_title: e.target.value }))}
+                                            placeholder="Ex: Vendedor 01"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">

@@ -111,6 +111,7 @@ export enum EmployeePaymentStatus {
 export interface Employee {
   id: string; // UUID
   name: string;
+  job_title: string;
   meal_voucher_day: number;
   transport_voucher_day: number;
   payment_method: string; // PIX or Bank Account (text)
