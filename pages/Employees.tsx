@@ -168,6 +168,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                 emp.name,
                 emp.job_title || '-',
                 `Dia ${emp.payment_day}`,
+                emp.payment_method || '-',
                 formatCurrency(salary),
                 formatCurrency(vMeal),
                 formatCurrency(vTransport),
@@ -178,20 +179,20 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
 
         autoTable(doc, {
             startY: 50,
-            head: [['Funcionário', 'Função', 'Dia Pgto', 'Salário', 'V. Refeição', 'V. Transporte', 'Total', 'Status']],
+            head: [['Funcionário', 'Função', 'Dia Pgto', 'Meio Pgto', 'Salário', 'V. Refeição', 'V. Transporte', 'Total', 'Status']],
             body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [29, 94, 215], textColor: [255, 255, 255] },
-            styles: { fontSize: 8 },
+            styles: { fontSize: 7 },
             columnStyles: {
-                3: { halign: 'right' },
                 4: { halign: 'right' },
                 5: { halign: 'right' },
-                6: { halign: 'right', fontStyle: 'bold' },
-                7: { halign: 'center', fontStyle: 'bold' }
+                6: { halign: 'right' },
+                7: { halign: 'right', fontStyle: 'bold' },
+                8: { halign: 'center', fontStyle: 'bold' }
             },
             didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 7) {
+                if (data.section === 'body' && data.column.index === 8) {
                     const val = data.cell.text[0];
                     if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
                     else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
@@ -314,6 +315,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                             <tr className="border-b border-slate-100 bg-slate-50/50">
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Funcionário</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Dia Pgto</th>
+                                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Meio Pgto</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Salário Base</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Vale Refeição</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Vale Transporte</th>
@@ -344,6 +346,9 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                                             <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-bold">
                                                 Dia {emp.payment_day}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-xs font-semibold text-slate-700">{emp.payment_method || 'Não inf.'}</p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.salary || emp.salary || 0)}</p>
