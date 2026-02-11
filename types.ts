@@ -101,6 +101,34 @@ export interface CreditCardPayment {
   created_at?: string;
 }
 
+
+export enum EmployeePaymentStatus {
+  PAID = 'PAGO',
+  PENDING = 'PENDENTE',
+  OVERDUE = 'ATRASADO'
+}
+
+export interface Employee {
+  id: string; // UUID
+  name: string;
+  meal_voucher_day: number;
+  transport_voucher_day: number;
+  payment_method: string; // PIX or Bank Account (text)
+  payment_day: number; // Day of month
+  active: boolean;
+  created_at?: string;
+}
+
+export interface EmployeePayment {
+  id: string; // UUID
+  employee_id: string; // UUID
+  year_month: string; // YYYY.MM
+  status: EmployeePaymentStatus;
+  meal_voucher_total: number;
+  transport_voucher_total: number;
+  created_at?: string;
+}
+
 export interface AppState {
   users: User[];
   clients: Client[];
@@ -109,7 +137,10 @@ export interface AppState {
   dailyPayments: DailyPayment[];
   creditCardExpenses: CreditCardExpense[];
   creditCardPayments: CreditCardPayment[];
+  employees: Employee[];
+  employeePayments: EmployeePayment[];
   events: CalendarEvent[];
   currentUser: User | null;
   loading: boolean;
 }
+

@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, Payable, CalendarEvent, AppState,
-  UserProfile, InvoiceStatus, DailyPayment, CreditCardExpense, CreditCardPayment
+  UserProfile, InvoiceStatus, DailyPayment, CreditCardExpense, CreditCardPayment,
+  Employee, EmployeePayment, EmployeePaymentStatus
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -14,6 +15,7 @@ import SettingsPage from './pages/Settings';
 import ReportsPage from './pages/Reports';
 import DailyPaymentsPage from './pages/DailyPayments';
 import CreditCardExpensesPage from './pages/CreditCardExpenses';
+import EmployeesPage from './pages/Employees';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
@@ -33,6 +35,8 @@ const App: React.FC = () => {
     dailyPayments: [],
     creditCardExpenses: [],
     creditCardPayments: [],
+    employees: [],
+    employeePayments: [],
     events: [],
     loading: true
   });
@@ -85,14 +89,16 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes] = await Promise.all([
         supabase.from('clients').select('*'),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
         supabase.from('payables').select('*'),
         supabase.from('daily_payments').select('*').order('date', { ascending: false }),
         supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }),
-        supabase.from('credit_card_payments').select('*')
+        supabase.from('credit_card_payments').select('*'),
+        supabase.from('employees').select('*').order('name', { ascending: true }),
+        supabase.from('employee_payments').select('*')
       ]);
 
       if (profile) {
@@ -145,6 +151,8 @@ const App: React.FC = () => {
           dailyPayments: (dailyPaymentsRes.data || []) as DailyPayment[],
           creditCardExpenses,
           creditCardPayments,
+          employees: (employeesRes.data || []) as Employee[],
+          employeePayments: (employeePaymentsRes.data || []) as EmployeePayment[],
           events: events,
           loading: false
         }));
@@ -682,6 +690,62 @@ const App: React.FC = () => {
     }
   };
 
+  const addEmployee = async (employee: Omit<Employee, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('employees').insert([employee]).select().single();
+    if (data && !error) {
+      setState(prev => ({ ...prev, employees: [...prev.employees, data] }));
+    } else {
+      console.error(error);
+      alert('Erro ao adicionar funcionário.');
+    }
+  };
+
+  const updateEmployee = async (employee: Employee) => {
+    const { id, created_at, ...updateData } = employee;
+    const { error } = await supabase.from('employees').update(updateData).eq('id', id);
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        employees: prev.employees.map(e => e.id === id ? employee : e)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao atualizar funcionário.');
+    }
+  };
+
+  const deleteEmployee = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este funcionário?')) return;
+    const { error } = await supabase.from('employees').delete().eq('id', id);
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        employees: prev.employees.filter(e => e.id !== id)
+      }));
+    } else {
+      console.error(error);
+      alert('Erro ao excluir funcionário.');
+    }
+  };
+
+  const updateEmployeePayment = async (payment: Omit<EmployeePayment, 'id' | 'created_at'>) => {
+    const existing = state.employeePayments.find(p => p.employee_id === payment.employee_id && p.year_month === payment.year_month);
+    if (existing) {
+      const { data, error } = await supabase.from('employee_payments').update(payment).eq('id', existing.id).select().single();
+      if (data && !error) {
+        setState(prev => ({
+          ...prev,
+          employeePayments: prev.employeePayments.map(p => p.id === existing.id ? data : p)
+        }));
+      }
+    } else {
+      const { data, error } = await supabase.from('employee_payments').insert([payment]).select().single();
+      if (data && !error) {
+        setState(prev => ({ ...prev, employeePayments: [...prev.employeePayments, data] }));
+      }
+    }
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -710,8 +774,19 @@ const App: React.FC = () => {
           onDeleteExpense={deleteCreditCardExpense}
           onTogglePayment={toggleCreditCardPayment}
         />;
+
       case 'relatorios': return <ReportsPage state={state} />;
+      case 'funcionarios':
+        return <EmployeesPage
+          employees={state.employees}
+          employeePayments={state.employeePayments}
+          onAddEmployee={addEmployee}
+          onUpdateEmployee={updateEmployee}
+          onDeleteEmployee={deleteEmployee}
+          onUpdatePayment={updateEmployeePayment}
+        />;
       case 'calendario':
+
         return <CalendarPage
           events={state.events}
           onAdd={addEvent}
