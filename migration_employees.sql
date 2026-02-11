@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.employees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     job_title TEXT, -- Function/Position
+    salary DECIMAL(10, 2) DEFAULT 0,
     meal_voucher_day DECIMAL(10, 2) DEFAULT 0,
     transport_voucher_day DECIMAL(10, 2) DEFAULT 0,
     payment_method TEXT, -- "Pix", "Conta Bancária", etc.
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.employee_payments (
     employee_id UUID REFERENCES public.employees(id) ON DELETE CASCADE,
     year_month TEXT NOT NULL, -- Format: YYYY.MM
     status TEXT NOT NULL DEFAULT 'PENDENTE', -- "PAGO", "PENDENTE", "ATRASADO"
+    salary DECIMAL(10, 2) DEFAULT 0,
     meal_voucher_total DECIMAL(10, 2) DEFAULT 0,
     transport_voucher_total DECIMAL(10, 2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),

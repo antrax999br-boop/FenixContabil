@@ -30,6 +30,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
     const [newEmployee, setNewEmployee] = useState({
         name: '',
         job_title: '',
+        salary: '',
         meal_voucher_day: '',
         transport_voucher_day: '',
         payment_method: '',
@@ -61,6 +62,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         const employeeData = {
             name: newEmployee.name,
             job_title: newEmployee.job_title,
+            salary: parseFloat(newEmployee.salary) || 0,
             meal_voucher_day: parseFloat(newEmployee.meal_voucher_day) || 0,
             transport_voucher_day: parseFloat(newEmployee.transport_voucher_day) || 0,
             payment_method: newEmployee.payment_method,
@@ -77,6 +79,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         setNewEmployee({
             name: '',
             job_title: '',
+            salary: '',
             meal_voucher_day: '',
             transport_voucher_day: '',
             payment_method: '',
@@ -91,6 +94,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         setNewEmployee({
             name: employee.name,
             job_title: employee.job_title || '',
+            salary: (employee.salary || 0).toString(),
             meal_voucher_day: employee.meal_voucher_day.toString(),
             transport_voucher_day: employee.transport_voucher_day.toString(),
             payment_method: employee.payment_method || '',
@@ -107,6 +111,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
             employee_id: employeeId,
             year_month: currentYM,
             status,
+            salary: existing?.salary || 0,
             meal_voucher_total: existing?.meal_voucher_total || 0,
             transport_voucher_total: existing?.transport_voucher_total || 0
         });
@@ -122,6 +127,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
             employee_id: employee.id,
             year_month: currentYM,
             status: getPaymentForEmployee(employee.id)?.status || EmployeePaymentStatus.PENDING,
+            salary: employee.salary || 0,
             meal_voucher_total: mealTotal,
             transport_voucher_total: transportTotal
         });
@@ -145,34 +151,44 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         doc.text(`Mês de Referência: ${period.toUpperCase()}`, 14, 30);
         doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
 
+        let totalPayroll = 0;
         const tableData = filteredEmployees.map(emp => {
             const payment = getPaymentForEmployee(emp.id);
             const status = payment?.status || EmployeePaymentStatus.PENDING;
+            const salary = payment?.salary || emp.salary || 0;
+            const vMeal = payment?.meal_voucher_total || 0;
+            const vTransport = payment?.transport_voucher_total || 0;
+            const rowTotal = salary + vMeal + vTransport;
+            totalPayroll += rowTotal;
+
             return [
                 emp.name,
                 emp.job_title || '-',
                 `Dia ${emp.payment_day}`,
-                emp.payment_method || '-',
-                formatCurrency(payment?.meal_voucher_total || 0),
-                formatCurrency(payment?.transport_voucher_total || 0),
+                formatCurrency(salary),
+                formatCurrency(vMeal),
+                formatCurrency(vTransport),
+                formatCurrency(rowTotal),
                 status
             ];
         });
 
         autoTable(doc, {
             startY: 50,
-            head: [['Funcionário', 'Função', 'Dia Pgto', 'Meio Pgto', 'V. Refeição', 'V. Transporte', 'Status']],
+            head: [['Funcionário', 'Função', 'Dia Pgto', 'Salário', 'V. Refeição', 'V. Transporte', 'Total', 'Status']],
             body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [29, 94, 215], textColor: [255, 255, 255] },
             styles: { fontSize: 8 },
             columnStyles: {
+                3: { halign: 'right' },
                 4: { halign: 'right' },
                 5: { halign: 'right' },
-                6: { halign: 'center', fontStyle: 'bold' }
+                6: { halign: 'right', fontStyle: 'bold' },
+                7: { halign: 'center', fontStyle: 'bold' }
             },
             didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 6) {
+                if (data.section === 'body' && data.column.index === 7) {
                     const val = data.cell.text[0];
                     if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
                     else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
@@ -180,6 +196,16 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                 }
             }
         });
+
+        const finalY = (doc as any).lastAutoTable.finalY + 10;
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(140, finalY, 56, 15, 3, 3, 'F');
+        doc.setFontSize(10);
+        doc.setTextColor(15, 63, 168);
+        doc.text('TOTAL DA FOLHA:', 145, finalY + 9);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(formatCurrency(totalPayroll), 193, finalY + 9, { align: 'right' });
 
         doc.save(`Pagamentos_${period.replace(/\s/g, '').replace('/', '_')}.pdf`);
     };
@@ -211,6 +237,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                             setNewEmployee({
                                 name: '',
                                 job_title: '',
+                                salary: '',
                                 meal_voucher_day: '',
                                 transport_voucher_day: '',
                                 payment_method: '',
@@ -274,9 +301,10 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                             <tr className="border-b border-slate-100 bg-slate-50/50">
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Funcionário</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Dia Pgto</th>
+                                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Salário Base</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Vale Refeição</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Vale Transporte</th>
-                                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Pagamento</th>
+                                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Total</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
                                 <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Ações</th>
                             </tr>
@@ -303,6 +331,9 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                                             <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-bold">
                                                 Dia {emp.payment_day}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.salary || emp.salary || 0)}</p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
@@ -335,7 +366,13 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <p className="text-xs font-semibold text-slate-700">{emp.payment_method || 'Não inf.'}</p>
+                                            <p className="text-xs font-black text-primary">
+                                                {formatCurrency(
+                                                    (payment?.salary || emp.salary || 0) +
+                                                    (payment?.meal_voucher_total || 0) +
+                                                    (payment?.transport_voucher_total || 0)
+                                                )}
+                                            </p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col items-center gap-1">
@@ -428,6 +465,18 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                                             placeholder="Ex: Vendedor 01"
                                         />
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Salário Base (R$)</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 outline-none transition-all font-bold text-slate-800"
+                                        value={newEmployee.salary}
+                                        onChange={e => setNewEmployee(prev => ({ ...prev, salary: e.target.value }))}
+                                        placeholder="0.00"
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">

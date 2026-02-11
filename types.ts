@@ -112,6 +112,7 @@ export interface Employee {
   id: string; // UUID
   name: string;
   job_title: string;
+  salary: number;
   meal_voucher_day: number;
   transport_voucher_day: number;
   payment_method: string; // PIX or Bank Account (text)
@@ -125,6 +126,7 @@ export interface EmployeePayment {
   employee_id: string; // UUID
   year_month: string; // YYYY.MM
   status: EmployeePaymentStatus;
+  salary: number;
   meal_voucher_total: number;
   transport_voucher_total: number;
   created_at?: string;
