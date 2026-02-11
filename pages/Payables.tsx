@@ -107,7 +107,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
             new Date(p.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
             p.prazo || '---',
             p.payment_date ? new Date(p.payment_date + 'T12:00:00').toLocaleDateString('pt-BR') : '---',
-            p.status === InvoiceStatus.PAID ? 'PAGO' : p.status === InvoiceStatus.OVERDUE ? 'ATRASADO' : 'PENDENTE'
+            p.value > 0 ? (p.status === InvoiceStatus.PAID ? 'PAGO' : p.status === InvoiceStatus.OVERDUE ? 'ATRASADO' : 'PENDENTE') : '---'
         ]);
 
         autoTable(doc, {
@@ -251,14 +251,16 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                                 : '---'}
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase ${p.status === InvoiceStatus.PAID
-                                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                                                : p.status === InvoiceStatus.OVERDUE
-                                                    ? 'bg-rose-100 text-rose-700 border-rose-200'
-                                                    : 'bg-amber-100 text-amber-700 border-amber-200'
-                                                }`}>
-                                                {p.status === InvoiceStatus.PAID ? 'Pago' : p.status === InvoiceStatus.OVERDUE ? 'Atrasado' : 'Pendente'}
-                                            </span>
+                                            {p.value > 0 && (
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase ${p.status === InvoiceStatus.PAID
+                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                                    : p.status === InvoiceStatus.OVERDUE
+                                                        ? 'bg-rose-100 text-rose-700 border-rose-200'
+                                                        : 'bg-amber-100 text-amber-700 border-amber-200'
+                                                    }`}>
+                                                    {p.status === InvoiceStatus.PAID ? 'Pago' : p.status === InvoiceStatus.OVERDUE ? 'Atrasado' : 'Pendente'}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
