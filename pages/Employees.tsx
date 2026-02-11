@@ -1,7 +1,8 @@
-
 import React, { useState } from 'react';
 import { Employee, EmployeePayment, EmployeePaymentStatus } from '../types';
 import { formatCurrency } from '../utils/calculations';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface EmployeesPageProps {
     employees: Employee[];
@@ -126,6 +127,63 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         });
     };
 
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        const period = `${months[monthFilter]} / ${yearFilter}`;
+
+        // Header Background
+        doc.setFillColor(15, 63, 168); // Brand Navy
+        doc.rect(0, 0, 210, 40, 'F');
+
+        // Header Text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(20);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Relatório de Pagamentos - Funcionários', 14, 20);
+
+        doc.setFontSize(10);
+        doc.text(`Mês de Referência: ${period.toUpperCase()}`, 14, 30);
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+
+        const tableData = filteredEmployees.map(emp => {
+            const payment = getPaymentForEmployee(emp.id);
+            const status = payment?.status || EmployeePaymentStatus.PENDING;
+            return [
+                emp.name,
+                emp.job_title || '-',
+                `Dia ${emp.payment_day}`,
+                emp.payment_method || '-',
+                formatCurrency(payment?.meal_voucher_total || 0),
+                formatCurrency(payment?.transport_voucher_total || 0),
+                status
+            ];
+        });
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['Funcionário', 'Função', 'Dia Pgto', 'Meio Pgto', 'V. Refeição', 'V. Transporte', 'Status']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [29, 94, 215], textColor: [255, 255, 255] },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                4: { halign: 'right' },
+                5: { halign: 'right' },
+                6: { halign: 'center', fontStyle: 'bold' }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 6) {
+                    const val = data.cell.text[0];
+                    if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
+                    else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
+                    else if (val === 'PENDENTE') data.cell.styles.textColor = [245, 158, 11];
+                }
+            }
+        });
+
+        doc.save(`Pagamentos_${period.replace(/\s/g, '').replace('/', '_')}.pdf`);
+    };
+
     return (
         <div className="max-w-7xl mx-auto pb-20">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -139,25 +197,34 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                         Controle de Funcionários
                     </h2>
                 </div>
-                <button
-                    onClick={() => {
-                        setEditingEmployee(null);
-                        setNewEmployee({
-                            name: '',
-                            job_title: '',
-                            meal_voucher_day: '',
-                            transport_voucher_day: '',
-                            payment_method: '',
-                            payment_day: '5',
-                            active: true
-                        });
-                        setShowModal(true);
-                    }}
-                    className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-primary/25 hover:-translate-y-0.5"
-                >
-                    <span className="material-symbols-outlined text-lg">person_add</span>
-                    Novo Funcionário
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={generatePDF}
+                        className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+                        Relatório Mensal
+                    </button>
+                    <button
+                        onClick={() => {
+                            setEditingEmployee(null);
+                            setNewEmployee({
+                                name: '',
+                                job_title: '',
+                                meal_voucher_day: '',
+                                transport_voucher_day: '',
+                                payment_method: '',
+                                payment_day: '5',
+                                active: true
+                            });
+                            setShowModal(true);
+                        }}
+                        className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-primary/25 hover:-translate-y-0.5"
+                    >
+                        <span className="material-symbols-outlined text-lg">person_add</span>
+                        Novo Funcionário
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 flex flex-wrap items-center justify-between gap-6 shadow-sm">
