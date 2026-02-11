@@ -151,58 +151,81 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         doc.text(`Mês de Referência: ${period.toUpperCase()}`, 14, 30);
         doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
 
-        let totalPayroll = 0;
-        const tableData = filteredEmployees.map(emp => {
+        const employeesByDay: { [key: number]: any[] } = {};
+        filteredEmployees.forEach(emp => {
+            const day = emp.payment_day;
+            if (!employeesByDay[day]) employeesByDay[day] = [];
+
             const payment = getPaymentForEmployee(emp.id);
             const status = payment?.status || EmployeePaymentStatus.PENDING;
-
-            // Use saved payment values or project monthly totals (22 days) if not yet calculated
             const salary = (payment && payment.salary > 0) ? payment.salary : (emp.salary || 0);
             const vMeal = (payment && payment.meal_voucher_total > 0) ? payment.meal_voucher_total : (emp.meal_voucher_day * 22);
             const vTransport = (payment && payment.transport_voucher_total > 0) ? payment.transport_voucher_total : (emp.transport_voucher_day * 22);
-
             const rowTotal = salary + vMeal + vTransport;
-            totalPayroll += rowTotal;
 
-            return [
-                emp.name,
-                emp.job_title || '-',
-                `Dia ${emp.payment_day}`,
-                emp.payment_method || '-',
-                formatCurrency(salary),
-                formatCurrency(vMeal),
-                formatCurrency(vTransport),
-                formatCurrency(rowTotal),
-                status
-            ];
+            employeesByDay[day].push({
+                data: [
+                    emp.name,
+                    emp.job_title || '-',
+                    `Dia ${emp.payment_day}`,
+                    emp.payment_method || '-',
+                    formatCurrency(salary),
+                    formatCurrency(vMeal),
+                    formatCurrency(vTransport),
+                    formatCurrency(rowTotal),
+                    status
+                ],
+                total: rowTotal
+            });
         });
 
-        autoTable(doc, {
-            startY: 50,
-            head: [['Funcionário', 'Função', 'Dia Pgto', 'Meio Pgto', 'Salário', 'V. Refeição', 'V. Transporte', 'Total', 'Status']],
-            body: tableData,
-            theme: 'grid',
-            headStyles: { fillColor: [29, 94, 215], textColor: [255, 255, 255] },
-            styles: { fontSize: 7 },
-            columnStyles: {
-                4: { halign: 'right' },
-                5: { halign: 'right' },
-                6: { halign: 'right' },
-                7: { halign: 'right', fontStyle: 'bold' },
-                8: { halign: 'center', fontStyle: 'bold' }
-            },
-            didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 8) {
-                    const val = data.cell.text[0];
-                    if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
-                    else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
-                    else if (val === 'PENDENTE') data.cell.styles.textColor = [245, 158, 11];
+        let currentY = 50;
+        let totalPayroll = 0;
+        const sortedDays = Object.keys(employeesByDay).map(Number).sort((a, b) => a - b);
+
+        sortedDays.forEach(day => {
+            const group = employeesByDay[day];
+            const groupTotal = group.reduce((acc, item) => acc + item.total, 0);
+            totalPayroll += groupTotal;
+
+            // Section Header
+            doc.setFillColor(241, 245, 249);
+            doc.rect(14, currentY, 182, 8, 'F');
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 63, 168);
+            doc.text(`PAGAMENTOS - DIA ${day}`, 18, currentY + 6);
+            doc.text(`Subtotal: ${formatCurrency(groupTotal)}`, 196, currentY + 6, { align: 'right' });
+
+            autoTable(doc, {
+                startY: currentY + 10,
+                head: [['Funcionário', 'Função', 'Dia Pgto', 'Meio Pgto', 'Salário', 'V. Refeição', 'V. Transporte', 'Total', 'Status']],
+                body: group.map(item => item.data),
+                theme: 'grid',
+                headStyles: { fillColor: [29, 94, 215], textColor: [255, 255, 255] },
+                styles: { fontSize: 7 },
+                columnStyles: {
+                    4: { halign: 'right' },
+                    5: { halign: 'right' },
+                    6: { halign: 'right' },
+                    7: { halign: 'right', fontStyle: 'bold' },
+                    8: { halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 8) {
+                        const val = data.cell.text[0];
+                        if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
+                        else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
+                        else if (val === 'PENDENTE') data.cell.styles.textColor = [245, 158, 11];
+                    }
                 }
-            }
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 15;
         });
 
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
-        const boxWidth = 75;
+        const finalY = currentY - 5;
+        const boxWidth = 85;
         const boxX = 210 - boxWidth - 14;
 
         doc.setFillColor(248, 250, 252);
@@ -211,12 +234,12 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
         doc.setFont('helvetica', 'normal');
-        doc.text('RESUMO DA FOLHA', boxX + 5, finalY + 7);
+        doc.text('RESUMO GERAL DA FOLHA', boxX + 5, finalY + 7);
 
         doc.setFontSize(10);
         doc.setTextColor(15, 63, 168);
         doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL GERAL:', boxX + 5, finalY + 14);
+        doc.text('TOTAL DE TODOS OS DIAS:', boxX + 5, finalY + 14);
 
         doc.setFontSize(12);
         doc.text(formatCurrency(totalPayroll), boxX + boxWidth - 5, finalY + 14, { align: 'right' });
