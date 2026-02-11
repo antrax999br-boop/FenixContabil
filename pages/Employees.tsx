@@ -155,9 +155,12 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         const tableData = filteredEmployees.map(emp => {
             const payment = getPaymentForEmployee(emp.id);
             const status = payment?.status || EmployeePaymentStatus.PENDING;
-            const salary = payment?.salary || emp.salary || 0;
-            const vMeal = payment?.meal_voucher_total || 0;
-            const vTransport = payment?.transport_voucher_total || 0;
+
+            // Use saved payment values or project monthly totals (22 days) if not yet calculated
+            const salary = (payment && payment.salary > 0) ? payment.salary : (emp.salary || 0);
+            const vMeal = (payment && payment.meal_voucher_total > 0) ? payment.meal_voucher_total : (emp.meal_voucher_day * 22);
+            const vTransport = (payment && payment.transport_voucher_total > 0) ? payment.transport_voucher_total : (emp.transport_voucher_day * 22);
+
             const rowTotal = salary + vMeal + vTransport;
             totalPayroll += rowTotal;
 
@@ -198,14 +201,24 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         });
 
         const finalY = (doc as any).lastAutoTable.finalY + 10;
+        const boxWidth = 75;
+        const boxX = 210 - boxWidth - 14;
+
         doc.setFillColor(248, 250, 252);
-        doc.roundedRect(140, finalY, 56, 15, 3, 3, 'F');
+        doc.roundedRect(boxX, finalY, boxWidth, 20, 3, 3, 'F');
+
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'normal');
+        doc.text('RESUMO DA FOLHA', boxX + 5, finalY + 7);
+
         doc.setFontSize(10);
         doc.setTextColor(15, 63, 168);
-        doc.text('TOTAL DA FOLHA:', 145, finalY + 9);
-        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text(formatCurrency(totalPayroll), 193, finalY + 9, { align: 'right' });
+        doc.text('TOTAL GERAL:', boxX + 5, finalY + 14);
+
+        doc.setFontSize(12);
+        doc.text(formatCurrency(totalPayroll), boxX + boxWidth - 5, finalY + 14, { align: 'right' });
 
         doc.save(`Pagamentos_${period.replace(/\s/g, '').replace('/', '_')}.pdf`);
     };
