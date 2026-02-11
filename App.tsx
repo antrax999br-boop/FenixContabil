@@ -786,7 +786,8 @@ const App: React.FC = () => {
           onUpdatePayment={updateEmployeePayment}
         />;
       case 'calendario':
-
+        const isAdmin = state.currentUser?.email === 'laercio@laercio.com.br' || state.currentUser?.email === 'eliane@fenix.com.br';
+        if (!isAdmin) return <Dashboard state={state} onTabChange={setActiveTab} />;
         return <CalendarPage
           events={state.events}
           onAdd={addEvent}

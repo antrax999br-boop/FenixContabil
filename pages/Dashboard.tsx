@@ -140,21 +140,23 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
           <button className="text-xs font-bold text-primary hover:underline">Personalizar</button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button
-            onClick={() => onTabChange('calendario')}
-            className="group bg-white p-5 rounded-xl border border-slate-100 hover:border-primary/40 transition-all shadow-sm text-left"
-          >
-            <div className="flex items-center gap-4">
-              <div className="size-11 rounded-full bg-blue-50 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                <span className="material-symbols-outlined text-2xl leading-none">event</span>
+          {(state.currentUser?.email === 'laercio@laercio.com.br' || state.currentUser?.email === 'eliane@fenix.com.br') && (
+            <button
+              onClick={() => onTabChange('calendario')}
+              className="group bg-white p-5 rounded-xl border border-slate-100 hover:border-primary/40 transition-all shadow-sm text-left"
+            >
+              <div className="flex items-center gap-4">
+                <div className="size-11 rounded-full bg-blue-50 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                  <span className="material-symbols-outlined text-2xl leading-none">event</span>
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-slate-800">Calendário</h5>
+                  <p className="text-xs text-slate-500 mt-0.5">Agendamentos e Prazos Fiscais</p>
+                </div>
+                <span className="material-symbols-outlined ml-auto text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
               </div>
-              <div>
-                <h5 className="text-sm font-bold text-slate-800">Calendário</h5>
-                <p className="text-xs text-slate-500 mt-0.5">Agendamentos e Prazos Fiscais</p>
-              </div>
-              <span className="material-symbols-outlined ml-auto text-slate-300 group-hover:text-primary transition-colors">chevron_right</span>
-            </div>
-          </button>
+            </button>
+          )}
 
           <button
             onClick={() => onTabChange('clientes')}
