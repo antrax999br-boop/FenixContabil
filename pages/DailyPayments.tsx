@@ -14,7 +14,7 @@ interface DailyPaymentsPageProps {
 const categoryFields: (keyof Omit<DailyPayment, 'id' | 'date' | 'created_at' | 'total'>)[] = [
     'ativos', 'inativos', 'alteracao', 'distrato',
     'remissao_gps', 'recal_guia', 'regularizacao',
-    'rent_invest_facil', 'abertura', 'parcelamentos', 'outros'
+    'rent_invest_facil', 'abertura', 'parcelamentos', 'certificadora', 'outros'
 ];
 
 const categoryLabels: Record<string, string> = {
@@ -28,6 +28,7 @@ const categoryLabels: Record<string, string> = {
     rent_invest_facil: 'Rent Invest Fácil',
     abertura: 'Abertura',
     parcelamentos: 'Parcelamentos',
+    certificadora: 'Certificadora',
     outros: 'Outros'
 };
 
@@ -40,7 +41,8 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         description: '',
         ativos: '', inativos: '', alteracao: '', distrato: '',
         remissao_gps: '', recal_guia: '', regularizacao: '',
-        rent_invest_facil: '', abertura: '', parcelamentos: '', outros: ''
+        rent_invest_facil: '', abertura: '', parcelamentos: '',
+        certificadora: '', outros: ''
     });
 
     const getDayOfWeek = (dateStr: string) => {
@@ -74,7 +76,8 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
             description: '',
             ativos: '', inativos: '', alteracao: '', distrato: '',
             remissao_gps: '', recal_guia: '', regularizacao: '',
-            rent_invest_facil: '', abertura: '', parcelamentos: '', outros: ''
+            rent_invest_facil: '', abertura: '', parcelamentos: '',
+            certificadora: '', outros: ''
         });
     };
 

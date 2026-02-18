@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS public.daily_payments (
     rent_invest_facil TEXT,
     abertura TEXT,
     parcelamentos TEXT,
+    certificadora TEXT,
     total TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

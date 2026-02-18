@@ -77,6 +77,7 @@ export interface DailyPayment {
   rent_invest_facil?: string;
   abertura?: string;
   parcelamentos?: string;
+  certificadora?: string;
   total?: string;
   created_at?: string;
 }
