@@ -33,6 +33,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         value: 0,
         due_date: new Date().toISOString().split('T')[0],
         prazo: '',
+        status: InvoiceStatus.NOT_PAID
     });
 
     const handleOpenEdit = (payable: Payable) => {
@@ -42,6 +43,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
             value: payable.value,
             due_date: payable.due_date,
             prazo: payable.prazo || '',
+            status: payable.status
         });
         setShowModal(true);
     };
@@ -54,6 +56,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
             value: 0,
             due_date: new Date().toISOString().split('T')[0],
             prazo: '',
+            status: InvoiceStatus.NOT_PAID
         });
     };
 
@@ -143,7 +146,9 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                 ...newPayable
             });
         } else {
-            onAdd(newPayable);
+            // New payable defaults to NOT_PAID or OVERDUE logic handled in App.tsx
+            const { status, ...payableWithoutStatus } = newPayable;
+            onAdd(payableWithoutStatus);
         }
 
         handleCloseModal();
@@ -264,15 +269,18 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {p.status !== InvoiceStatus.PAID && (
-                                                    <button
-                                                        onClick={() => onPay(p.id)}
-                                                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                        title="Marcar como Pago"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">check_circle</span>
-                                                    </button>
-                                                )}
+                                                <button
+                                                    onClick={() => onPay(p.id)}
+                                                    className={`p-1.5 rounded-lg transition-colors ${p.status === InvoiceStatus.PAID
+                                                        ? 'text-slate-400 hover:bg-slate-50'
+                                                        : 'text-emerald-600 hover:bg-emerald-50'
+                                                        }`}
+                                                    title={p.status === InvoiceStatus.PAID ? "Marcar como Não Pago" : "Marcar como Pago"}
+                                                >
+                                                    <span className={`material-symbols-outlined text-lg ${p.status === InvoiceStatus.PAID ? 'fill-emerald-500 text-emerald-500' : ''}`}>
+                                                        {p.status === InvoiceStatus.PAID ? 'check_circle' : 'radio_button_unchecked'}
+                                                    </span>
+                                                </button>
                                                 <button
                                                     onClick={() => handleOpenEdit(p)}
                                                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -343,15 +351,28 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Prazo (Opcional)</label>
-                                <input
-                                    className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-rose-500/20"
-                                    type="text"
-                                    placeholder="Ex: 30 dias, Imediato..."
-                                    value={newPayable.prazo}
-                                    onChange={e => setNewPayable({ ...newPayable, prazo: e.target.value })}
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase mb-1">Prazo (Opcional)</label>
+                                    <input
+                                        className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-rose-500/20"
+                                        type="text"
+                                        placeholder="Ex: 30 dias, Imediato..."
+                                        value={newPayable.prazo}
+                                        onChange={e => setNewPayable({ ...newPayable, prazo: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 uppercase mb-1">Status</label>
+                                    <select
+                                        className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-rose-500/20"
+                                        value={newPayable.status}
+                                        onChange={e => setNewPayable({ ...newPayable, status: e.target.value as InvoiceStatus })}
+                                    >
+                                        <option value={InvoiceStatus.PAID}>Pago</option>
+                                        <option value={InvoiceStatus.NOT_PAID}>Pendente / Não Pago</option>
+                                    </select>
+                                </div>
                             </div>
                             <div className="pt-2">
                                 <button

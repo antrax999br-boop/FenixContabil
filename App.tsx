@@ -552,24 +552,37 @@ const App: React.FC = () => {
     }
   };
 
-  const markPayablePaid = async (id: string) => {
+  const togglePayablePaid = async (id: string) => {
     const today = new Date().toISOString().split('T')[0];
+
+    // Find the current payable in state
+    const payable = state.payables.find(p => p.id === id);
+    if (!payable) return;
+
+    const isPaid = payable.status === InvoiceStatus.PAID;
+    const newStatus = isPaid
+      ? (payable.due_date < today ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID)
+      : InvoiceStatus.PAID;
+    const paymentDate = newStatus === InvoiceStatus.PAID ? today : null;
+
     const { error } = await supabase
       .from('payables')
-      .update({ status: InvoiceStatus.PAID, payment_date: today })
+      .update({ status: newStatus, payment_date: paymentDate })
       .eq('id', id);
 
     if (error) {
       console.warn('Failed to update payable in Supabase, updating localStorage');
-      const updated = state.payables.map(p =>
-        p.id === id ? { ...p, status: InvoiceStatus.PAID, payment_date: today } : p
-      );
-      localStorage.setItem('fenix_payables', JSON.stringify(updated));
-      setState(prev => ({ ...prev, payables: updated }));
+      setState(prev => {
+        const updated = prev.payables.map(p =>
+          p.id === id ? { ...p, status: newStatus, payment_date: paymentDate } : p
+        );
+        localStorage.setItem('fenix_payables', JSON.stringify(updated));
+        return { ...prev, payables: updated };
+      });
     } else {
       setState(prev => ({
         ...prev,
-        payables: prev.payables.map(p => p.id === id ? { ...p, status: InvoiceStatus.PAID, payment_date: today } : p)
+        payables: prev.payables.map(p => p.id === id ? { ...p, status: newStatus, payment_date: paymentDate } : p)
       }));
     }
   };
@@ -579,9 +592,11 @@ const App: React.FC = () => {
     if (error) {
       console.warn('Failed to delete payable from Supabase, removing from localStorage');
     }
-    const updated = state.payables.filter(p => p.id !== id);
-    localStorage.setItem('fenix_payables', JSON.stringify(updated));
-    setState(prev => ({ ...prev, payables: updated }));
+    setState(prev => {
+      const updated = prev.payables.filter(p => p.id !== id);
+      localStorage.setItem('fenix_payables', JSON.stringify(updated));
+      return { ...prev, payables: updated };
+    });
   };
 
   const updatePayable = async (payable: Payable) => {
@@ -600,9 +615,11 @@ const App: React.FC = () => {
 
     if (error) {
       console.warn('Failed to update payable in Supabase, updating localStorage');
-      const updated = state.payables.map(p => p.id === id ? payable : p);
-      localStorage.setItem('fenix_payables', JSON.stringify(updated));
-      setState(prev => ({ ...prev, payables: updated }));
+      setState(prev => {
+        const updated = prev.payables.map(p => p.id === id ? { ...payable, status: updateData.status } : p);
+        localStorage.setItem('fenix_payables', JSON.stringify(updated));
+        return { ...prev, payables: updated };
+      });
     } else {
       setState(prev => ({
         ...prev,
@@ -787,7 +804,7 @@ const App: React.FC = () => {
       case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
       case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="INTERNET" />;
       case 'notas-aguardando': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="AGUARDANDO" />;
-      case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={markPayablePaid} onUpdate={updatePayable} onDelete={deletePayable} />;
+      case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={togglePayablePaid} onUpdate={updatePayable} onDelete={deletePayable} />;
       case 'pagamentos-diarios': return <DailyPaymentsPage dailyPayments={state.dailyPayments} onAdd={addDailyPayment} onUpdate={updateDailyPayment} onDelete={deleteDailyPayment} />;
       case 'controle_cartao':
         return <CreditCardExpensesPage
