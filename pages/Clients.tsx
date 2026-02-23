@@ -20,6 +20,12 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
     fine_percent: 2.0,
     observations: ''
   });
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.cnpj.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +75,22 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
         </button>
       </div>
 
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+        <div className="relative flex-1 max-w-md">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+          <input
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 text-slate-900 outline-none"
+            placeholder="Buscar por nome ou CNPJ..."
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="text-sm text-slate-500 font-medium">
+          {filteredClients.length} {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -82,7 +104,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {clients.map(client => (
+              {filteredClients.map(client => (
                 <tr key={client.id} className="hover:bg-slate-50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
