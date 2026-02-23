@@ -8,6 +8,7 @@ ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS penalty_applied BOOLEAN DEF
 ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS fine_value NUMERIC(15,2) DEFAULT 0;
 ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS interest_value NUMERIC(15,2) DEFAULT 0;
 ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS reissue_tax NUMERIC(15,2) DEFAULT 0;
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS postage_tax NUMERIC(15,2) DEFAULT 0;
 ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS days_overdue INTEGER DEFAULT 0;
 ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS final_value NUMERIC(15,2) DEFAULT 0;
 
@@ -49,6 +50,7 @@ DECLARE
   calc_fine NUMERIC;
   calc_interest NUMERIC;
   calc_reissue_tax NUMERIC := 2.50;
+  calc_postage_tax NUMERIC := 5.00;
 BEGIN
   FOR inv IN SELECT * FROM public.invoices WHERE status != 'PAGO' LOOP
     
@@ -73,20 +75,18 @@ BEGIN
             fine_value = calc_fine,
             interest_value = calc_interest,
             reissue_tax = calc_reissue_tax,
+            postage_tax = calc_postage_tax,
             days_overdue = biz_days_late,
-            final_value = inv.original_value + calc_fine + calc_interest + calc_reissue_tax
+            final_value = inv.original_value + calc_fine + calc_interest + calc_reissue_tax + calc_postage_tax
         WHERE id = inv.id;
       END IF;
       
     ELSIF NOT inv.penalty_applied THEN
-      -- If not yet 5 business days AND not already applied, 
-      -- update status to ATRASADO if it's past due date (even if before 5 days), 
-      -- but don't apply values.
-      
+      -- ... (rest of logic remains same)
       IF current_date_val > inv.due_date THEN
         UPDATE public.invoices
         SET status = 'ATRASADO',
-            days_overdue = (current_date_val - inv.due_date), -- Full days for display
+            days_overdue = (current_date_val - inv.due_date),
             final_value = inv.original_value
         WHERE id = inv.id;
       ELSE
@@ -97,7 +97,6 @@ BEGIN
         WHERE id = inv.id;
       END IF;
     END IF;
-    -- If penalty_applied is TRUE, we DON'T update anything, as requested.
   END LOOP;
 END;
 $$ LANGUAGE plpgsql;

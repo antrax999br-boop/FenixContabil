@@ -42,6 +42,7 @@ export interface Invoice {
   fine_value: number;
   interest_value: number;
   reissue_tax: number;
+  postage_tax: number;
   payment_date?: string | null;
   individual_name?: string;
   created_at?: string;

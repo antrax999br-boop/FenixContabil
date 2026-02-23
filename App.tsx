@@ -297,7 +297,8 @@ const App: React.FC = () => {
       penalty_applied: false,
       fine_value: 0,
       interest_value: 0,
-      reissue_tax: 0
+      reissue_tax: 0,
+      postage_tax: 0
     };
 
     const calculated = client
@@ -318,6 +319,7 @@ const App: React.FC = () => {
         fine_value: calculated.fine_value,
         interest_value: calculated.interest_value,
         reissue_tax: calculated.reissue_tax,
+        postage_tax: calculated.postage_tax,
         individual_name: invoiceData.individual_name
       }])
       .select()

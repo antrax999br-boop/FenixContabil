@@ -39,7 +39,7 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
     return {
       ...invoice,
       status: InvoiceStatus.OVERDUE,
-      final_value: invoice.original_value + invoice.fine_value + invoice.interest_value + invoice.reissue_tax
+      final_value: invoice.original_value + invoice.fine_value + invoice.interest_value + invoice.reissue_tax + (invoice.postage_tax || 0)
     };
   }
 
@@ -56,6 +56,7 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
     const fineValue = invoice.original_value * (client.fine_percent / 100);
     const interestValue = invoice.original_value * (client.interest_percent / 100);
     const reissueTax = 2.50;
+    const postageTax = 5.00;
 
     return {
       ...invoice,
@@ -65,7 +66,8 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
       fine_value: fineValue,
       interest_value: interestValue,
       reissue_tax: reissueTax,
-      final_value: invoice.original_value + fineValue + interestValue + reissueTax
+      postage_tax: postageTax,
+      final_value: invoice.original_value + fineValue + interestValue + reissueTax + postageTax
     };
   }
 

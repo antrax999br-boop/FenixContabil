@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 
 interface InvoicesPageProps {
   state: AppState;
-  onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value' | 'penalty_applied' | 'fine_value' | 'interest_value' | 'reissue_tax'> & { individual_name?: string }) => void;
+  onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value' | 'penalty_applied' | 'fine_value' | 'interest_value' | 'reissue_tax' | 'postage_tax'> & { individual_name?: string }) => void;
   onPay: (id: string) => void;
   onUpdate: (invoice: Invoice) => void;
   onDelete: (id: string) => void;
@@ -212,7 +212,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       const client = state.clients.find(c => c.id === inv.client_id);
       let details = '';
       if (inv.penalty_applied) {
-        details = `\n(Multa: ${formatCurrency(inv.fine_value)} + Juros: ${formatCurrency(inv.interest_value)} + Taxa: ${formatCurrency(inv.reissue_tax)})`;
+        details = `\n(Multa: ${formatCurrency(inv.fine_value)} + Juros: ${formatCurrency(inv.interest_value)} + Taxas: ${formatCurrency(inv.reissue_tax)} e ${formatCurrency(inv.postage_tax)})`;
       }
       return [
         client?.name || inv.individual_name || 'Diversos',
@@ -418,7 +418,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                           <div className="flex flex-col items-end">
                             <span className="text-sm font-bold text-slate-900">{formatCurrency(inv.final_value)}</span>
                             {inv.penalty_applied && (
-                              <span className="text-[9px] text-rose-500 font-medium">Inclui multa, juros e taxa R$ 2,50</span>
+                              <span className="text-[9px] text-rose-500 font-medium text-right leading-tight">
+                                Inclui multa, juros e taxas<br />
+                                (R$ 2,50 + R$ 5,00)
+                              </span>
                             )}
                           </div>
                         </td>
