@@ -24,6 +24,7 @@ export interface Client {
   name: string;
   cnpj: string;
   interest_percent: number;
+  fine_percent: number;
   observations: string;
   created_at?: string;
 }
@@ -37,6 +38,10 @@ export interface Invoice {
   status: InvoiceStatus;
   days_overdue: number;
   final_value: number;
+  penalty_applied: boolean;
+  fine_value: number;
+  interest_value: number;
+  reissue_tax: number;
   payment_date?: string | null;
   individual_name?: string;
   created_at?: string;

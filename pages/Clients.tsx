@@ -17,6 +17,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
     name: '',
     cnpj: '',
     interest_percent: 1.0,
+    fine_percent: 2.0,
     observations: ''
   });
 
@@ -29,7 +30,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
       onAdd(formData);
     }
 
-    setFormData({ name: '', cnpj: '', interest_percent: 1.0, observations: '' });
+    setFormData({ name: '', cnpj: '', interest_percent: 1.0, fine_percent: 2.0, observations: '' });
     setEditingId(null);
     setShowModal(false);
   };
@@ -40,6 +41,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
       name: client.name,
       cnpj: client.cnpj,
       interest_percent: client.interest_percent,
+      fine_percent: client.fine_percent || 0,
       observations: client.observations || ''
     });
     setShowModal(true);
@@ -47,7 +49,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
 
   const handleNewClick = () => {
     setEditingId(null);
-    setFormData({ name: '', cnpj: '', interest_percent: 1.0, observations: '' });
+    setFormData({ name: '', cnpj: '', interest_percent: 1.0, fine_percent: 2.0, observations: '' });
     setShowModal(true);
   };
 
@@ -75,6 +77,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nome</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">CNPJ</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Juros (%)</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Multa (%)</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
@@ -93,7 +96,8 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600">{formatCNPJ(client.cnpj)}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-slate-900">{client.interest_percent.toFixed(2)}% ao dia</td>
+                  <td className="px-6 py-4 text-sm font-medium text-slate-900">{client.interest_percent.toFixed(2)}%</td>
+                  <td className="px-6 py-4 text-sm font-medium text-slate-900">{client.fine_percent?.toFixed(2) || '0.00'}%</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -149,16 +153,29 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                   placeholder="00.000.000/0000-00"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Juros e Multa (%)</label>
-                <input
-                  required
-                  type="number"
-                  step="0.01"
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
-                  value={formData.interest_percent}
-                  onChange={e => setFormData({ ...formData, interest_percent: parseFloat(e.target.value) })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Juros (%)</label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
+                    value={formData.interest_percent}
+                    onChange={e => setFormData({ ...formData, interest_percent: parseFloat(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Multa (%)</label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-slate-50 text-slate-900"
+                    value={formData.fine_percent}
+                    onChange={e => setFormData({ ...formData, fine_percent: parseFloat(e.target.value) })}
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Observações</label>

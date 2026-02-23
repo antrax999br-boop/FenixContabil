@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 
 interface InvoicesPageProps {
   state: AppState;
-  onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value'> & { individual_name?: string }) => void;
+  onAdd: (invoice: Omit<Invoice, 'id' | 'status' | 'days_overdue' | 'final_value' | 'penalty_applied' | 'fine_value' | 'interest_value' | 'reissue_tax'> & { individual_name?: string }) => void;
   onPay: (id: string) => void;
   onUpdate: (invoice: Invoice) => void;
   onDelete: (id: string) => void;
@@ -210,13 +210,17 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
 
     const tableData = filteredInvoices.map(inv => {
       const client = state.clients.find(c => c.id === inv.client_id);
+      let details = '';
+      if (inv.penalty_applied) {
+        details = `\n(Multa: ${formatCurrency(inv.fine_value)} + Juros: ${formatCurrency(inv.interest_value)} + Taxa: ${formatCurrency(inv.reissue_tax)})`;
+      }
       return [
         client?.name || inv.individual_name || 'Diversos',
         getDisplayNumber(inv.invoice_number),
         new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
         inv.status,
         formatCurrency(inv.original_value),
-        formatCurrency(inv.final_value)
+        formatCurrency(inv.final_value) + details
       ];
     });
 
@@ -410,7 +414,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                         <td className="px-6 py-4 text-center">
                           {isAguardando ? renderStatusBadge(inv, 'hourglass_empty', 'text-purple-500') : <span className="text-slate-300">-</span>}
                         </td>
-                        <td className="px-6 py-4 text-sm font-bold text-slate-900 text-right">{formatCurrency(inv.final_value)}</td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex flex-col items-end">
+                            <span className="text-sm font-bold text-slate-900">{formatCurrency(inv.final_value)}</span>
+                            {inv.penalty_applied && (
+                              <span className="text-[9px] text-rose-500 font-medium">Inclui multa, juros e taxa R$ 2,50</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button

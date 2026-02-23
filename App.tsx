@@ -293,7 +293,11 @@ const App: React.FC = () => {
       id: 'temp',
       status: InvoiceStatus.NOT_PAID,
       days_overdue: 0,
-      final_value: invoiceData.original_value
+      final_value: invoiceData.original_value,
+      penalty_applied: false,
+      fine_value: 0,
+      interest_value: 0,
+      reissue_tax: 0
     };
 
     const calculated = client
@@ -310,6 +314,10 @@ const App: React.FC = () => {
         status: calculated.status,
         days_overdue: calculated.days_overdue,
         final_value: calculated.final_value,
+        penalty_applied: calculated.penalty_applied,
+        fine_value: calculated.fine_value,
+        interest_value: calculated.interest_value,
+        reissue_tax: calculated.reissue_tax,
         individual_name: invoiceData.individual_name
       }])
       .select()
@@ -340,7 +348,7 @@ const App: React.FC = () => {
   };
 
   const updateInvoice = async (invoice: Invoice) => {
-    const { id, created_at, days_overdue, final_value, ...updateData } = invoice;
+    const { id, created_at, ...updateData } = invoice;
     const { data, error } = await supabase
       .from('invoices')
       .update(updateData)
