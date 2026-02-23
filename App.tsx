@@ -90,7 +90,7 @@ const App: React.FC = () => {
 
       // Fetch App Data
       const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes] = await Promise.all([
-        supabase.from('clients').select('*'),
+        supabase.from('clients').select('*').order('name', { ascending: true }),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
         supabase.from('payables').select('*'),
@@ -228,6 +228,17 @@ const App: React.FC = () => {
   };
 
   const addClient = async (clientData: Omit<Client, 'id'>) => {
+    // Check for duplicates
+    const isDuplicate = state.clients.some(c =>
+      c.name.toLowerCase() === clientData.name.toLowerCase() ||
+      c.cnpj.replace(/\D/g, '') === clientData.cnpj.replace(/\D/g, '')
+    );
+
+    if (isDuplicate) {
+      alert('Já existe um cliente cadastrado com este nome ou CNPJ.');
+      return;
+    }
+
     const { data, error } = await supabase
       .from('clients')
       .insert([{ ...clientData }])
@@ -235,7 +246,10 @@ const App: React.FC = () => {
       .single();
 
     if (data && !error) {
-      setState(prev => ({ ...prev, clients: [...prev.clients, data] }));
+      setState(prev => ({
+        ...prev,
+        clients: [...prev.clients, data].sort((a, b) => a.name.localeCompare(b.name))
+      }));
     } else if (error) {
       console.error(error);
       alert('Erro ao adicionar cliente');
@@ -256,7 +270,7 @@ const App: React.FC = () => {
     if (!error) {
       setState(prev => ({
         ...prev,
-        clients: prev.clients.map(c => c.id === client.id ? client : c)
+        clients: prev.clients.map(c => c.id === client.id ? client : c).sort((a, b) => a.name.localeCompare(b.name))
       }));
     } else {
       console.error(error);
