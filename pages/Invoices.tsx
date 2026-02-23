@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { AppState, Invoice, InvoiceStatus } from '../types';
 import { formatCurrency } from '../utils/calculations';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { UserOptions } from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface InvoicesPageProps {
   state: AppState;
@@ -228,7 +227,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       ];
     });
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 50,
       head: [['Cliente', 'ID/Número', 'Vencimento', 'Status', 'Vlr. Original', 'Vlr. Final']],
       body: tableData,
@@ -330,7 +329,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       formatCurrency(inv.final_value)
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 100,
       head: [['Número', 'Vencimento', 'Status', 'Vlr. Original', 'Multa', 'Juros', 'Taxas', 'Vlr. Final']],
       body: tableData,
