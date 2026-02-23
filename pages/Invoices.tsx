@@ -16,6 +16,9 @@ interface InvoicesPageProps {
 
 const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpdate, onDelete, initialFilter }) => {
   const [showModal, setShowModal] = useState(false);
+  const [showClientReportModal, setShowClientReportModal] = useState(false);
+  const [reportClientId, setReportClientId] = useState('');
+  const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [filter, setFilter] = useState<InvoiceStatus | 'ALL' | 'ATIVOS' | 'SEM_NOTA' | 'INTERNET' | 'AGUARDANDO'>(initialFilter || 'ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,7 +41,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
 
-  const filteredInvoices = state.invoices.filter(i => {
+  const filteredInvoices = state.invoices.filter((i: Invoice) => {
     const client = state.clients.find(c => c.id === i.client_id);
 
     const isAguardando = i.invoice_number?.startsWith('AGU-');
@@ -73,9 +76,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       (i.invoice_number || '').toLowerCase().includes(searchLower);
 
     return matchesStatus && matchesMonth && matchesYear && matchesSearch;
-  }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+  }).sort((a: Invoice, b: Invoice) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
-  const groupedInvoices = filteredInvoices.reduce((acc, inv) => {
+  const groupedInvoices = filteredInvoices.reduce((acc: Record<number, Invoice[]>, inv: Invoice) => {
     // Safer month extraction from YYYY-MM-DD string
     const month = parseInt(inv.due_date.split('-')[1]) - 1;
     if (!acc[month]) acc[month] = [];
@@ -208,7 +211,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     doc.text(`Período: ${period.toUpperCase()}`, 14, 30);
     doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
 
-    const tableData = filteredInvoices.map(inv => {
+    const tableData = filteredInvoices.map((inv: Invoice) => {
       const client = state.clients.find(c => c.id === inv.client_id);
       let details = '';
       if (inv.penalty_applied) {
@@ -244,12 +247,109 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       }
     });
 
-    const total = filteredInvoices.reduce((acc, inv) => acc + inv.final_value, 0);
+    const total = filteredInvoices.reduce((acc: number, inv: Invoice) => acc + inv.final_value, 0);
     doc.setFontSize(12);
     doc.setTextColor(30, 41, 59);
     doc.text(`TOTAL GERAL: ${formatCurrency(total)}`, 196, (doc as any).lastAutoTable.finalY + 15, { align: 'right' });
 
     doc.save(`Relatorio_Fenix_${filter}_${period.replace(/\s/g, '')}.pdf`);
+  };
+
+  const generateClientReportPDF = () => {
+    if (!reportClientId) return alert('Selecione um cliente para gerar o relatório.');
+
+    const client = state.clients.find(c => c.id === reportClientId);
+    if (!client) return;
+
+    const clientInvoices = state.invoices.filter(inv =>
+      inv.client_id === reportClientId &&
+      new Date(inv.due_date + 'T12:00:00').getFullYear() === reportYear
+    ).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+
+    if (clientInvoices.length === 0) {
+      return alert('Nenhum boleto encontrado para este cliente no ano selecionado.');
+    }
+
+    const doc = new jsPDF();
+
+    // Custom Header for Client Report
+    doc.setFillColor(15, 23, 42); // Navy 900
+    doc.rect(0, 0, 210, 50, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Relatório Financeiro Individual', 14, 22);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Cliente: ${client.name}`, 14, 32);
+    doc.text(`CNPJ: ${client.cnpj}`, 14, 38);
+    doc.text(`Ano de Referência: ${reportYear}`, 14, 44);
+    doc.text(`Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 196, 44, { align: 'right' });
+
+    // Summary Box
+    const totalOriginal = clientInvoices.reduce((acc, inv) => acc + inv.original_value, 0);
+    const totalFinal = clientInvoices.reduce((acc, inv) => acc + inv.final_value, 0);
+    const totalPaid = clientInvoices.filter(inv => inv.status === InvoiceStatus.PAID).reduce((acc, inv) => acc + inv.final_value, 0);
+    const totalPending = totalFinal - totalPaid;
+    const totalFines = clientInvoices.reduce((acc, inv) => acc + inv.fine_value, 0);
+    const totalInterest = clientInvoices.reduce((acc, inv) => acc + inv.interest_value, 0);
+
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, 55, 182, 35, 3, 3, 'F');
+
+    doc.setTextColor(51, 65, 85);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMO FINANCEIRO DO ANO', 20, 62);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Original: ${formatCurrency(totalOriginal)}`, 20, 70);
+    doc.text(`Total c/ Encargos: ${formatCurrency(totalFinal)}`, 20, 76);
+    doc.text(`Total Multas: ${formatCurrency(totalFines)}`, 85, 70);
+    doc.text(`Total Juros: ${formatCurrency(totalInterest)}`, 85, 76);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(16, 185, 129); // Success
+    doc.text(`Total Liquidado: ${formatCurrency(totalPaid)}`, 145, 70);
+    doc.setTextColor(225, 29, 72); // Danger
+    doc.text(`Total em Aberto: ${formatCurrency(totalPending)}`, 145, 76);
+
+    const tableData = clientInvoices.map(inv => [
+      getDisplayNumber(inv.invoice_number),
+      new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
+      inv.status,
+      formatCurrency(inv.original_value),
+      formatCurrency(inv.fine_value),
+      formatCurrency(inv.interest_value),
+      formatCurrency(inv.final_value)
+    ]);
+
+    autoTable(doc, {
+      startY: 95,
+      head: [['Número', 'Vencimento', 'Status', 'Vlr. Original', 'Multa', 'Juros', 'Vlr. Final']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        3: { halign: 'right' },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right', fontStyle: 'bold' }
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 2) {
+          const val = data.cell.text[0];
+          if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
+          else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
+        }
+      }
+    });
+
+    doc.save(`Relatorio_Cliente_${client.name.replace(/\s/g, '_')}_${reportYear}.pdf`);
+    setShowClientReportModal(false);
   };
 
   return (
@@ -266,6 +366,13 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
           </h2>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={() => setShowClientReportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white border border-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-900 transition-colors shadow-sm"
+          >
+            <span className="material-symbols-outlined text-sm">person_search</span>
+            Relatório p/ Cliente
+          </button>
           <button
             onClick={generatePDF}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"
@@ -619,6 +726,61 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showClientReportModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-lg text-slate-800">Gerar Relatório por Cliente</h3>
+              <button onClick={() => setShowClientReportModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-500">Selecione o cliente e o ano para gerar um PDF detalhado com todos os boletos do período.</p>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Cliente</label>
+                <select
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
+                  value={reportClientId}
+                  onChange={e => setReportClientId(e.target.value)}
+                >
+                  <option value="">Selecione um cliente...</option>
+                  {state.clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Ano de Referência</label>
+                <select
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
+                  value={reportYear}
+                  onChange={e => setReportYear(parseInt(e.target.value))}
+                >
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowClientReportModal(false)}
+                  className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={generateClientReportPDF}
+                  className="flex-1 py-2.5 rounded-lg bg-slate-800 text-white font-bold text-sm hover:bg-slate-900 shadow-lg shadow-slate-900/10"
+                >
+                  Gerar PDF Detalhado
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
