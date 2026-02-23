@@ -51,17 +51,30 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
   const businessDaysLate = countBusinessDays(dueDate, today);
   const calendarDaysLate = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
+  // Minimum 1 week fee as soon as charges apply, then +5 every 7 days
+  const weeksLate = Math.max(1, Math.floor(calendarDaysLate / 7));
+  const postageTax = weeksLate * 5.00;
+
+  // If penalty was already applied, we only recalculate the recurring weekly tax
+  if (invoice.penalty_applied) {
+    return {
+      ...invoice,
+      status: InvoiceStatus.OVERDUE,
+      postage_tax: postageTax,
+      final_value: invoice.original_value + invoice.fine_value + invoice.interest_value + invoice.reissue_tax + postageTax
+    };
+  }
+
   // Condition to apply charges: 5 business days of delay
   if (businessDaysLate >= 5) {
     const fineValue = invoice.original_value * (client.fine_percent / 100);
     const interestValue = invoice.original_value * (client.interest_percent / 100);
     const reissueTax = 2.50;
-    const postageTax = 5.00;
 
     return {
       ...invoice,
       status: InvoiceStatus.OVERDUE,
-      days_overdue: businessDaysLate,
+      days_overdue: calendarDaysLate,
       penalty_applied: true,
       fine_value: fineValue,
       interest_value: interestValue,
