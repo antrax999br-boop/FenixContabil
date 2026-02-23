@@ -34,15 +34,7 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
     return invoice;
   }
 
-  // If penalty was already applied, we don't recalculate
-  if (invoice.penalty_applied) {
-    return {
-      ...invoice,
-      status: InvoiceStatus.OVERDUE,
-      final_value: invoice.original_value + invoice.fine_value + invoice.interest_value + invoice.reissue_tax + (invoice.postage_tax || 0)
-    };
-  }
-
+  // Calculate delay days
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDate = new Date(invoice.due_date);
@@ -55,13 +47,20 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
   const weeksLate = Math.max(1, Math.floor(calendarDaysLate / 7));
   const postageTax = weeksLate * 5.00;
 
-  // If penalty was already applied, we only recalculate the recurring weekly tax
+  // If penalty was already applied, we recalculate the values to ensure they reflect current client rates
   if (invoice.penalty_applied) {
+    const currentFine = invoice.original_value * (client.fine_percent / 100);
+    const currentInterest = invoice.original_value * (client.interest_percent / 100);
+    const reissueTax = invoice.reissue_tax || 2.50;
+
     return {
       ...invoice,
       status: InvoiceStatus.OVERDUE,
+      fine_value: currentFine,
+      interest_value: currentInterest,
+      reissue_tax: reissueTax,
       postage_tax: postageTax,
-      final_value: invoice.original_value + invoice.fine_value + invoice.interest_value + invoice.reissue_tax + postageTax
+      final_value: invoice.original_value + currentFine + currentInterest + reissueTax + postageTax
     };
   }
 

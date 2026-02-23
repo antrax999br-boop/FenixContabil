@@ -293,8 +293,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     const totalFinal = clientInvoices.reduce((acc, inv) => acc + inv.final_value, 0);
     const totalPaid = clientInvoices.filter(inv => inv.status === InvoiceStatus.PAID).reduce((acc, inv) => acc + inv.final_value, 0);
     const totalPending = totalFinal - totalPaid;
-    const totalFines = clientInvoices.reduce((acc, inv) => acc + inv.fine_value, 0);
-    const totalInterest = clientInvoices.reduce((acc, inv) => acc + inv.interest_value, 0);
+    const totalFines = clientInvoices.reduce((acc: number, inv: Invoice) => acc + inv.fine_value, 0);
+    const totalInterest = clientInvoices.reduce((acc: number, inv: Invoice) => acc + inv.interest_value, 0);
+    const totalTaxes = clientInvoices.reduce((acc: number, inv: Invoice) => acc + (inv.reissue_tax || 0) + (inv.postage_tax || 0), 0);
 
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(14, 55, 182, 35, 3, 3, 'F');
@@ -307,8 +308,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     doc.setFont('helvetica', 'normal');
     doc.text(`Total Original: ${formatCurrency(totalOriginal)}`, 20, 70);
     doc.text(`Total c/ Encargos: ${formatCurrency(totalFinal)}`, 20, 76);
-    doc.text(`Total Multas: ${formatCurrency(totalFines)}`, 85, 70);
-    doc.text(`Total Juros: ${formatCurrency(totalInterest)}`, 85, 76);
+    doc.text(`Total Multas: ${formatCurrency(totalFines)}`, 80, 70);
+    doc.text(`Total Juros: ${formatCurrency(totalInterest)}`, 80, 76);
+    doc.text(`Total Taxas: ${formatCurrency(totalTaxes)}`, 80, 82);
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(16, 185, 129); // Success
@@ -316,19 +318,20 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     doc.setTextColor(225, 29, 72); // Danger
     doc.text(`Total em Aberto: ${formatCurrency(totalPending)}`, 145, 76);
 
-    const tableData = clientInvoices.map(inv => [
+    const tableData = clientInvoices.map((inv: Invoice) => [
       getDisplayNumber(inv.invoice_number),
       new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
       inv.status,
       formatCurrency(inv.original_value),
       formatCurrency(inv.fine_value),
       formatCurrency(inv.interest_value),
+      formatCurrency((inv.reissue_tax || 0) + (inv.postage_tax || 0)),
       formatCurrency(inv.final_value)
     ]);
 
-    autoTable(doc, {
-      startY: 95,
-      head: [['Número', 'Vencimento', 'Status', 'Vlr. Original', 'Multa', 'Juros', 'Vlr. Final']],
+    (doc as any).autoTable({
+      startY: 100,
+      head: [['Número', 'Vencimento', 'Status', 'Vlr. Original', 'Multa', 'Juros', 'Taxas', 'Vlr. Final']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
