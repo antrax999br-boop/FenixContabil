@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { AppState, Invoice, InvoiceStatus } from '../types';
 import { formatCurrency } from '../utils/calculations';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
+import { UserOptions } from 'jspdf-autotable';
 
 interface InvoicesPageProps {
   state: AppState;
@@ -227,7 +228,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       ];
     });
 
-    autoTable(doc, {
+    (doc as any).autoTable({
       startY: 50,
       head: [['Cliente', 'ID/Número', 'Vencimento', 'Status', 'Vlr. Original', 'Vlr. Final']],
       body: tableData,
@@ -238,7 +239,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
         4: { halign: 'right' },
         5: { halign: 'right', fontStyle: 'bold' }
       },
-      didParseCell: (data) => {
+      didParseCell: (data: any) => {
         if (data.section === 'body' && data.column.index === 3) {
           const val = data.cell.text[0];
           if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
