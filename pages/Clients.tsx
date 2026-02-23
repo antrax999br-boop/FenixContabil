@@ -22,10 +22,15 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
   });
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.cnpj.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))
-  );
+  const filteredClients = clients.filter(client => {
+    const searchLower = searchTerm.toLowerCase();
+    const searchNumbers = searchTerm.replace(/\D/g, '');
+
+    const matchesName = client.name.toLowerCase().includes(searchLower);
+    const matchesCNPJ = searchNumbers !== '' && client.cnpj.replace(/\D/g, '').includes(searchNumbers);
+
+    return matchesName || matchesCNPJ;
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
