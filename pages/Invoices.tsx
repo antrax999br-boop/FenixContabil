@@ -81,7 +81,11 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       (i.invoice_number || '').toLowerCase().includes(searchLower);
 
     return matchesStatus && matchesMonth && matchesYear && matchesSearch;
-  }).sort((a: Invoice, b: Invoice) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+  }).sort((a: Invoice, b: Invoice) => {
+    const nameA = state.clients.find(c => c.id === a.client_id)?.name || a.individual_name || '';
+    const nameB = state.clients.find(c => c.id === b.client_id)?.name || b.individual_name || '';
+    return nameA.localeCompare(nameB);
+  });
 
   const groupedInvoices = filteredInvoices.reduce((acc: Record<number, Invoice[]>, inv: Invoice) => {
     // Safer month extraction from YYYY-MM-DD string
