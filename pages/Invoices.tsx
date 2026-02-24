@@ -109,8 +109,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     if (regType === 'INTERNET' && !newInvoice.individual_name) return alert('Informe o nome/serviço para cobrança');
 
     let finalNumber = newInvoice.invoice_number;
-    if (regType === 'SEM_NOTA') finalNumber = 'S/N';
-    else if (regType === 'INTERNET' && !finalNumber.startsWith('INT-')) {
+    if (regType === 'SEM_NOTA') {
+      finalNumber = finalNumber || 'S/N';
+    } else if (regType === 'INTERNET' && !finalNumber.startsWith('INT-')) {
       finalNumber = 'INT-' + (finalNumber || 'AUTOGEN');
     } else if (regType === 'AGUARDANDO' && !finalNumber.startsWith('AGU-')) {
       finalNumber = 'AGU-' + (finalNumber || 'PEND');
@@ -659,22 +660,24 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                   )}
                 </div>
 
-                {regType !== 'SEM_NOTA' && (
-                  <div className="col-span-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
-                    </label>
-                    <input
-                      id="invoice_number"
-                      name="invoice_number"
-                      type="text"
-                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400"
-                      value={newInvoice.invoice_number}
-                      onChange={e => setNewInvoice(prev => ({ ...prev, invoice_number: e.target.value }))}
-                      placeholder={regType === 'INTERNET' ? 'Ex: INT-2024-001' : 'Ex: NF-2024-001'}
-                    />
-                  </div>
-                )}
+                <div className="col-span-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
+                  </label>
+                  <input
+                    id="invoice_number"
+                    name="invoice_number"
+                    type="text"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400"
+                    value={newInvoice.invoice_number}
+                    onChange={e => setNewInvoice(prev => ({ ...prev, invoice_number: e.target.value }))}
+                    placeholder={
+                      regType === 'INTERNET' ? 'Ex: INT-2024-001' :
+                        regType === 'SEM_NOTA' ? 'Ex: S/N ou Informação Adicional' :
+                          'Ex: NF-2024-001'
+                    }
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Valor Original (R$)</label>
