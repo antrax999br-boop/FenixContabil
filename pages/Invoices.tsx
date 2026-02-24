@@ -49,16 +49,21 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     const isSemNota = !isAguardando && !isInternet && (!i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
     const isStandard = !isAguardando && !isInternet && !isSemNota;
 
+    // Isolar Boletos Internet: Se não for o filtro específico de INTERNET, não mostrar boletos de internet
+    if (filter === 'INTERNET') {
+      if (!isInternet) return false;
+    } else {
+      if (isInternet) return false;
+    }
+
     let matchesStatus = false;
-    if (filter === 'ALL') {
-      // General view: show everything
+    if (filter === 'ALL' || filter === 'INTERNET') {
+      // General view (now excluding internet) or Internet specific view
       matchesStatus = true;
     } else if (filter === 'ATIVOS') {
       matchesStatus = isStandard;
     } else if (filter === 'SEM_NOTA') {
       matchesStatus = isSemNota;
-    } else if (filter === 'INTERNET') {
-      matchesStatus = isInternet;
     } else if (filter === 'AGUARDANDO') {
       matchesStatus = isAguardando;
     } else {
@@ -194,7 +199,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const title = filter === 'AGUARDANDO' ? 'Relatório: Aguardando Nota Do Cliente' : 'Relatório de Boletos e Registros';
+    const title =
+      filter === 'AGUARDANDO' ? 'Relatório: Aguardando Nota Do Cliente' :
+        filter === 'INTERNET' ? 'Relatório: Boletos Pela Internet' :
+          'Relatório de Boletos e Registros';
     const period = `${monthFilter === 'ALL' ? 'Ano Todo' : months[monthFilter]} / ${yearFilter === 'ALL' ? 'Todos os Anos' : yearFilter}`;
 
     // Header Background
@@ -261,10 +269,13 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     const client = state.clients.find(c => c.id === reportClientId);
     if (!client) return;
 
-    const clientInvoices = state.invoices.filter(inv =>
-      inv.client_id === reportClientId &&
-      new Date(inv.due_date + 'T12:00:00').getFullYear() === reportYear
-    ).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+    const clientInvoices = state.invoices.filter(inv => {
+      const isAguardando = inv.invoice_number?.startsWith('AGU-');
+      const isInternet = !isAguardando && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
+      return inv.client_id === reportClientId &&
+        new Date(inv.due_date + 'T12:00:00').getFullYear() === reportYear &&
+        !isInternet;
+    }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
     if (clientInvoices.length === 0) {
       return alert('Nenhum boleto encontrado para este cliente no ano selecionado.');

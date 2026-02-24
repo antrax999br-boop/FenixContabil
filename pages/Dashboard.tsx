@@ -18,7 +18,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   };
 
-  const currentMonthInvoices = state.invoices.filter(i => isCurrentMonth(i.due_date));
+  const currentMonthInvoices = state.invoices.filter(i => {
+    const isAguardando = i.invoice_number?.startsWith('AGU-');
+    const isInternet = !isAguardando && (i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id));
+    return isCurrentMonth(i.due_date) && !isInternet;
+  });
 
   const paidTotal = currentMonthInvoices
     .filter(i => i.status === InvoiceStatus.PAID)

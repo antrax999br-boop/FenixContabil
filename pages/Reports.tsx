@@ -20,7 +20,11 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
 
     // Filter invoices for the selected month (based on due_date)
     const filteredInvoices = useMemo(() => {
-        return state.invoices.filter(inv => inv.due_date.startsWith(selectedMonth));
+        return state.invoices.filter(inv => {
+            const isAguardando = inv.invoice_number?.startsWith('AGU-');
+            const isInternet = !isAguardando && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
+            return inv.due_date.startsWith(selectedMonth) && !isInternet;
+        });
     }, [state.invoices, selectedMonth]);
 
     // Totals for the selected month
