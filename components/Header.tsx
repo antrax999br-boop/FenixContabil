@@ -30,16 +30,18 @@ const Header: React.FC<HeaderProps> = ({ user, onNotificationsClick, onChatClick
       </div>
 
       <div className="flex items-center gap-4">
-        <button
-          onClick={onNotificationsClick}
-          className="size-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors relative"
-          title="Notificações"
-        >
-          <span className="material-symbols-outlined text-xl">notifications</span>
-          {hasUnreadNotifications && (
-            <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
-          )}
-        </button>
+        {(user.email === 'laercio@laercio.com.br' || user.email === 'eliane@fenix.com.br') && (
+          <button
+            onClick={onNotificationsClick}
+            className="size-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors relative"
+            title="Notificações"
+          >
+            <span className="material-symbols-outlined text-xl">notifications</span>
+            {hasUnreadNotifications && (
+              <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+            )}
+          </button>
+        )}
         <button
           onClick={onChatClick}
           className="size-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"

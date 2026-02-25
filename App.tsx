@@ -436,12 +436,15 @@ const App: React.FC = () => {
   // Event Reminder Check
   useEffect(() => {
     const checkReminders = () => {
+      // Restriction: Only Laercio and Eliane should receive calendar notifications
+      const userEmail = state.currentUser?.email;
+      const isAuthorized = userEmail === 'laercio@laercio.com.br' || userEmail === 'eliane@fenix.com.br';
+
+      if (!isAuthorized) return;
+
       const now = new Date();
       const currentDate = now.toLocaleDateString('en-CA');
       const currentTime = now.toTimeString().slice(0, 5); // HH:MM
-
-      // Log para auxílio no debug (pode ser removido após verificação)
-      // console.log(`Checando alarmes: ${currentDate} ${currentTime}`);
 
       state.events.forEach(event => {
         // Ensure event time is in HH:MM format for comparison
@@ -481,7 +484,7 @@ const App: React.FC = () => {
 
     const interval = setInterval(checkReminders, 10000); // Check every 10 seconds
     return () => clearInterval(interval);
-  }, [state.events, notifiedEvents]);
+  }, [state.events, notifiedEvents, state.currentUser]);
 
   const addEvent = async (eventData: Omit<CalendarEvent, 'id' | 'created_by'>) => {
     if (!state.currentUser) return;
@@ -847,8 +850,9 @@ const App: React.FC = () => {
   };
 
   // Calculate Unread Notifications
+  const isAuthorizedAlarms = state.currentUser?.email === 'laercio@laercio.com.br' || state.currentUser?.email === 'eliane@fenix.com.br';
   const todayStr = new Date().toLocaleDateString('en-CA');
-  const hasUnread = state.events.some(e => e.date === todayStr && !readNotifications.has(e.id));
+  const hasUnread = isAuthorizedAlarms && state.events.some(e => e.date === todayStr && !readNotifications.has(e.id));
 
   return (
     <div className="flex h-screen overflow-hidden bg-background-light">
@@ -870,7 +874,7 @@ const App: React.FC = () => {
           onLogout={logout}
           hasUnreadNotifications={hasUnread || hasNewChatMessage}
         />
-        {showNotifications && (
+        {showNotifications && isAuthorizedAlarms && (
           <div className="fixed top-16 right-24 z-50">
             <NotificationsDropdown
               events={state.events}
