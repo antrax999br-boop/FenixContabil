@@ -46,7 +46,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
 
     const isAguardando = i.invoice_number?.startsWith('AGU-');
     const isInternet = !isAguardando && (i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id));
-    const isSemNota = !isAguardando && !isInternet && (!i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
+    const isSemNota = !isAguardando && !isInternet && (i.invoice_number?.startsWith('SN-') || !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
     const isStandard = !isAguardando && !isInternet && !isSemNota;
 
     // Isolar Boletos Internet: Se não for o filtro específico de INTERNET, não mostrar boletos de internet
@@ -114,7 +114,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
 
     let finalNumber = newInvoice.invoice_number;
     if (regType === 'SEM_NOTA') {
-      finalNumber = finalNumber || 'S/N';
+      if (!finalNumber.startsWith('SN-')) {
+        finalNumber = 'SN-' + (finalNumber || 'SN');
+      }
     } else if (regType === 'INTERNET' && !finalNumber.startsWith('INT-')) {
       finalNumber = 'INT-' + (finalNumber || 'AUTOGEN');
     } else if (regType === 'AGUARDANDO' && !finalNumber.startsWith('AGU-')) {
@@ -156,7 +158,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     let type: 'STANDARD' | 'INTERNET' | 'SEM_NOTA' | 'AGUARDANDO' = 'STANDARD';
     if (inv.invoice_number?.startsWith('AGU-')) type = 'AGUARDANDO';
     else if (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id)) type = 'INTERNET';
-    else if (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') type = 'SEM_NOTA';
+    else if (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') type = 'SEM_NOTA';
 
     setRegType(type);
     setNewInvoice({
@@ -176,6 +178,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     if (!num) return 'S/N';
     if (num.startsWith('INT-')) return num.replace('INT-', '');
     if (num.startsWith('AGU-')) return num.replace('AGU-', '');
+    if (num.startsWith('SN-')) return num.replace('SN-', '');
     return num;
   };
 
@@ -508,7 +511,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                     const client = state.clients.find(c => c.id === inv.client_id);
                     const isAguardando = inv.invoice_number?.startsWith('AGU-');
                     const isInternet = !isAguardando && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
-                    const isSemNota = !isAguardando && !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
+                    const isSemNota = !isAguardando && !isInternet && (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
                     const isStandard = !isAguardando && !isInternet && !isSemNota;
 
                     return (
