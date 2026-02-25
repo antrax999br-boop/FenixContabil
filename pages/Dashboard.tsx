@@ -14,14 +14,19 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
   const currentYear = now.getFullYear();
 
   const isCurrentMonth = (dateStr: string) => {
-    const d = new Date(dateStr + 'T12:00:00');
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    if (!dateStr) return false;
+    // Robust parsing of YYYY-MM-DD
+    const [year, month] = dateStr.split('-').map(Number);
+    return (month - 1) === currentMonth && year === currentYear;
   };
 
-  const currentMonthInvoices = state.invoices.filter(i => {
+  // Harmonized filters to match Invoices.tsx
+  const allCurrentMonthInvoices = state.invoices.filter(i => isCurrentMonth(i.due_date));
+
+  const currentMonthInvoices = allCurrentMonthInvoices.filter(i => {
     const isAguardando = i.invoice_number?.startsWith('AGU-');
     const isInternet = !isAguardando && (i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id));
-    return isCurrentMonth(i.due_date) && !isInternet;
+    return !isInternet;
   });
 
   const paidTotal = currentMonthInvoices
@@ -38,12 +43,29 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
     .filter(i => i.status === InvoiceStatus.OVERDUE)
     .reduce((acc, i) => acc + i.final_value, 0);
 
-  // New calculations
-  const activeCount = pendingCount + overdueCount;
-  const activeTotal = pendingTotal + overdueTotal;
-  const noInvoiceCount = currentMonthInvoices.filter(i => !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/AN' || i.invoice_number.toUpperCase() === 'S/N').length;
-  const noInvoiceTotal = currentMonthInvoices
-    .filter(i => !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/AN' || i.invoice_number.toUpperCase() === 'S/N')
+  // Categorization for the specific cards
+  const getCategorized = (invs: typeof state.invoices) => {
+    return invs.map(i => {
+      const isAguardando = i.invoice_number?.startsWith('AGU-');
+      const isInternet = !isAguardando && (i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id));
+      const isSemNota = !isAguardando && !isInternet && (i.invoice_number?.startsWith('SN-') || !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
+      const isStandard = !isAguardando && !isInternet && !isSemNota;
+      return { ...i, isStandard, isSemNota, isAguardando, isInternet };
+    });
+  };
+
+  const categorizedInvoices = getCategorized(currentMonthInvoices);
+
+  // Boletos Ativos (Standard) - Only Pendente + Atraso
+  const activeCount = categorizedInvoices.filter(i => i.isStandard && (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE)).length;
+  const activeTotal = categorizedInvoices
+    .filter(i => i.isStandard && (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE))
+    .reduce((acc, i) => acc + i.final_value, 0);
+
+  // Boletos Sem Nota
+  const noInvoiceCount = categorizedInvoices.filter(i => i.isSemNota).length;
+  const noInvoiceTotal = categorizedInvoices
+    .filter(i => i.isSemNota)
     .reduce((acc, i) => acc + i.final_value, 0);
 
   const recentInvoices = [...currentMonthInvoices]
