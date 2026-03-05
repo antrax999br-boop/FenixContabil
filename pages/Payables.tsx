@@ -86,23 +86,33 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         doc.text(`Período: ${periodText}`, 14, 30);
         doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
 
-        // Summary Statistics
-        const totalValue = filteredPayables.reduce((acc, p) => acc + p.value, 0);
-        const paidValue = filteredPayables.filter(p => p.status === InvoiceStatus.PAID).reduce((acc, p) => acc + p.value, 0);
-        const pendingValue = totalValue - paidValue;
+        // Summary Statistics - Enhanced for accuracy and specific breakdowns
+        const totalValue = filteredPayables.reduce((acc, p) => acc + (p.value || 0), 0);
+        const totalPaid = filteredPayables.filter(p => p.status === InvoiceStatus.PAID).reduce((acc, p) => acc + (p.value || 0), 0);
+        const totalPending = filteredPayables.filter(p => p.status === InvoiceStatus.NOT_PAID).reduce((acc, p) => acc + (p.value || 0), 0);
+        const totalOverdue = filteredPayables.filter(p => p.status === InvoiceStatus.OVERDUE).reduce((acc, p) => acc + (p.value || 0), 0);
 
         doc.setFillColor(248, 250, 252);
-        doc.roundedRect(14, 45, 182, 25, 3, 3, 'F');
+        doc.roundedRect(14, 45, 182, 35, 3, 3, 'F'); // Increased height to accommodate all totals
 
         doc.setTextColor(51, 65, 85);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('RESUMO FINANCEIRO', 20, 52);
+        doc.text('RESUMO FINANCEIRO DO PERÍODO', 20, 52);
+
         doc.setFont('helvetica', 'normal');
-        doc.text(`Total Bruto: ${formatCurrency(totalValue)}`, 20, 58);
-        doc.text(`Total Liquidado: ${formatCurrency(paidValue)}`, 80, 58);
-        doc.text(`Total Pendente: ${formatCurrency(pendingValue)}`, 140, 58);
-        doc.text(`Quantidade de Lançamentos: ${filteredPayables.length}`, 20, 64);
+        doc.text(`Total Geral: ${formatCurrency(totalValue)}`, 20, 60);
+        doc.text(`Qtde. Lançamentos: ${filteredPayables.length}`, 20, 68);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(16, 185, 129); // Emerald-600
+        doc.text(`Total Pago: ${formatCurrency(totalPaid)}`, 80, 60);
+
+        doc.setTextColor(217, 119, 6); // Amber-600
+        doc.text(`Total Pendente: ${formatCurrency(totalPending)}`, 80, 68);
+
+        doc.setTextColor(225, 29, 72); // Rose-600
+        doc.text(`Total Atrasado: ${formatCurrency(totalOverdue)}`, 140, 60);
 
         const tableData = filteredPayables.map(p => [
             p.description,
@@ -114,7 +124,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         ]);
 
         autoTable(doc, {
-            startY: 75,
+            startY: 85, // Adjusted startY to avoid overlapping with the larger summary box
             head: [['Descrição', 'Valor', 'Vencimento', 'Prazo', 'Pagamento', 'Status']],
             body: tableData,
             theme: 'grid',

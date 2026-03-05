@@ -263,10 +263,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       }
     });
 
-    const total = filteredInvoices.reduce((acc: number, inv: Invoice) => acc + inv.final_value, 0);
-    const totalPaid = filteredInvoices.filter(inv => inv.status === InvoiceStatus.PAID).reduce((acc, inv) => acc + inv.final_value, 0);
-    const totalPending = filteredInvoices.filter(inv => inv.status === InvoiceStatus.NOT_PAID).reduce((acc, inv) => acc + inv.final_value, 0);
-    const totalOverdue = filteredInvoices.filter(inv => inv.status === InvoiceStatus.OVERDUE).reduce((acc, inv) => acc + inv.final_value, 0);
+    const total = filteredInvoices.reduce((acc: number, inv: Invoice) => acc + (inv.final_value || 0), 0);
+    const totalPaid = filteredInvoices.filter(inv => inv.status === InvoiceStatus.PAID).reduce((acc, inv) => acc + (inv.final_value || 0), 0);
+    const totalPending = filteredInvoices.filter(inv => inv.status === InvoiceStatus.NOT_PAID).reduce((acc, inv) => acc + (inv.final_value || 0), 0);
+    const totalOverdue = filteredInvoices.filter(inv => inv.status === InvoiceStatus.OVERDUE).reduce((acc, inv) => acc + (inv.final_value || 0), 0);
 
     let currentY = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(12);

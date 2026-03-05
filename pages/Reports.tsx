@@ -37,18 +37,19 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
         };
 
         filteredInvoices.forEach(inv => {
+            const val = inv.final_value || 0;
             stats.total.count++;
-            stats.total.value += inv.final_value;
+            stats.total.value += val;
 
             if (inv.status === InvoiceStatus.PAID) {
                 stats.pago.count++;
-                stats.pago.value += inv.final_value;
+                stats.pago.value += val;
             } else if (inv.status === InvoiceStatus.OVERDUE) {
                 stats.atrasado.count++;
-                stats.atrasado.value += inv.final_value;
+                stats.atrasado.value += val;
             } else {
                 stats.pendente.count++;
-                stats.pendente.value += inv.final_value;
+                stats.pendente.value += val;
             }
         });
 
