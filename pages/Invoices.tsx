@@ -264,9 +264,27 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     });
 
     const total = filteredInvoices.reduce((acc: number, inv: Invoice) => acc + inv.final_value, 0);
+    const totalPaid = filteredInvoices.filter(inv => inv.status === InvoiceStatus.PAID).reduce((acc, inv) => acc + inv.final_value, 0);
+    const totalPending = filteredInvoices.filter(inv => inv.status === InvoiceStatus.NOT_PAID).reduce((acc, inv) => acc + inv.final_value, 0);
+    const totalOverdue = filteredInvoices.filter(inv => inv.status === InvoiceStatus.OVERDUE).reduce((acc, inv) => acc + inv.final_value, 0);
+
+    let currentY = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(12);
     doc.setTextColor(30, 41, 59);
-    doc.text(`TOTAL GERAL: ${formatCurrency(total)}`, 196, (doc as any).lastAutoTable.finalY + 15, { align: 'right' });
+    doc.text(`TOTAL GERAL: ${formatCurrency(total)}`, 196, currentY, { align: 'right' });
+
+    doc.setFontSize(10);
+    currentY += 8;
+    doc.setTextColor(16, 185, 129);
+    doc.text(`TOTAL PAGO: ${formatCurrency(totalPaid)}`, 196, currentY, { align: 'right' });
+
+    currentY += 6;
+    doc.setTextColor(217, 119, 6);
+    doc.text(`TOTAL PENDENTE: ${formatCurrency(totalPending)}`, 196, currentY, { align: 'right' });
+
+    currentY += 6;
+    doc.setTextColor(225, 29, 72);
+    doc.text(`TOTAL ATRASADO: ${formatCurrency(totalOverdue)}`, 196, currentY, { align: 'right' });
 
     doc.save(`Relatorio_Fenix_${filter}_${period.replace(/\s/g, '')}.pdf`);
   };
