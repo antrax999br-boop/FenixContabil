@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AppState, InvoiceStatus } from '../types';
 import { formatCurrency } from '../utils/calculations';
 
@@ -9,11 +9,11 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const [viewDate, setViewDate] = useState(new Date());
+  const currentMonth = viewDate.getMonth();
+  const currentYear = viewDate.getFullYear();
 
-  const isCurrentMonth = (dateStr: string) => {
+  const isInSelectedMonth = (dateStr: string) => {
     if (!dateStr) return false;
     // Robust parsing of YYYY-MM-DD
     const [year, month] = dateStr.split('-').map(Number);
@@ -21,25 +21,25 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
   };
 
   // Harmonized filters to match Invoices.tsx
-  const allCurrentMonthInvoices = state.invoices.filter(i => isCurrentMonth(i.due_date));
+  const allSelectedMonthInvoices = state.invoices.filter(i => isInSelectedMonth(i.due_date));
 
-  const currentMonthInvoices = allCurrentMonthInvoices.filter(i => {
+  const selectedMonthInvoices = allSelectedMonthInvoices.filter(i => {
     const isAguardando = i.invoice_number?.startsWith('AGU-');
     const isInternet = !isAguardando && (i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id));
     return !isInternet;
   });
 
-  const paidTotal = currentMonthInvoices
+  const paidTotal = selectedMonthInvoices
     .filter(i => i.status === InvoiceStatus.PAID)
     .reduce((acc, i) => acc + i.final_value, 0);
 
-  const pendingCount = currentMonthInvoices.filter(i => i.status === InvoiceStatus.NOT_PAID).length;
-  const pendingTotal = currentMonthInvoices
+  const pendingCount = selectedMonthInvoices.filter(i => i.status === InvoiceStatus.NOT_PAID).length;
+  const pendingTotal = selectedMonthInvoices
     .filter(i => i.status === InvoiceStatus.NOT_PAID)
     .reduce((acc, i) => acc + i.final_value, 0);
 
-  const overdueCount = currentMonthInvoices.filter(i => i.status === InvoiceStatus.OVERDUE).length;
-  const overdueTotal = currentMonthInvoices
+  const overdueCount = selectedMonthInvoices.filter(i => i.status === InvoiceStatus.OVERDUE).length;
+  const overdueTotal = selectedMonthInvoices
     .filter(i => i.status === InvoiceStatus.OVERDUE)
     .reduce((acc, i) => acc + i.final_value, 0);
 
@@ -54,7 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
     });
   };
 
-  const categorizedInvoices = getCategorized(currentMonthInvoices);
+  const categorizedInvoices = getCategorized(selectedMonthInvoices);
 
   // Boletos Ativos (Standard) - Only Pendente + Atraso
   const activeCount = categorizedInvoices.filter(i => i.isStandard && (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE)).length;
@@ -68,16 +68,56 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
     .filter(i => i.isSemNota)
     .reduce((acc, i) => acc + i.final_value, 0);
 
-  const recentInvoices = [...currentMonthInvoices]
+  const recentInvoices = [...selectedMonthInvoices]
     .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
     .slice(0, 5);
+
+  const handlePrevMonth = () => {
+    setViewDate(new Date(currentYear, currentMonth - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setViewDate(new Date(currentYear, currentMonth + 1, 1));
+  };
+
+  const handleCurrentMonth = () => {
+    setViewDate(new Date());
+  };
+
+  const isToday = currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Painel de Controle</h2>
-          <p className="text-sm text-slate-500 font-medium">Resumo financeiro de {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1 hover:bg-slate-100 rounded-full transition-colors flex items-center justify-center"
+              title="Mês Anterior"
+            >
+              <span className="material-symbols-outlined text-slate-400">chevron_left</span>
+            </button>
+            <p className="text-sm text-slate-500 font-bold min-w-[140px] text-center capitalize">
+              {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(viewDate)}
+            </p>
+            <button
+              onClick={handleNextMonth}
+              className="p-1 hover:bg-slate-100 rounded-full transition-colors flex items-center justify-center"
+              title="Próximo Mês"
+            >
+              <span className="material-symbols-outlined text-slate-400">chevron_right</span>
+            </button>
+            {!isToday && (
+              <button
+                onClick={handleCurrentMonth}
+                className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded uppercase ml-2 hover:bg-primary/20 transition-colors"
+              >
+                Mês Atual
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -220,7 +260,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
 
       <section className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h4 className="text-base font-bold text-slate-800">Boletos deste Mês</h4>
+          <h4 className="text-base font-bold text-slate-800">
+            Boletos de {new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(viewDate)}
+          </h4>
           <div className="flex gap-2">
             <button className="px-3 py-1.5 text-xs font-semibold bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Exportar CSV</button>
             <button onClick={() => onTabChange('notas')} className="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg shadow-sm hover:opacity-90 transition-opacity">Ver Tudo</button>
@@ -265,6 +307,13 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
                   </tr>
                 );
               })}
+              {recentInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">
+                    Nenhum boleto encontrado para este período.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
