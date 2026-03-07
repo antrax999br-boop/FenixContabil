@@ -30,7 +30,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     individual_name: '',
     original_value: '',
     due_date: new Date().toISOString().split('T')[0],
-    status: InvoiceStatus.NOT_PAID
+    status: InvoiceStatus.NOT_PAID,
+    is_retirado: false
   });
 
   const months = [
@@ -132,6 +133,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
         due_date: newInvoice.due_date,
         status: newInvoice.status,
         individual_name: newInvoice.individual_name,
+        is_retirado: newInvoice.is_retirado,
         payment_date: newInvoice.status === InvoiceStatus.PAID ? (editingInvoice.payment_date || new Date().toISOString()) : null
       });
     } else {
@@ -139,7 +141,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
         ...newInvoice,
         original_value: parseFloat(newInvoice.original_value) || 0,
         invoice_number: finalNumber,
-      });
+      } as any);
     }
 
     setNewInvoice({
@@ -148,7 +150,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       individual_name: '',
       original_value: '',
       due_date: new Date().toISOString().split('T')[0],
-      status: InvoiceStatus.NOT_PAID
+      status: InvoiceStatus.NOT_PAID,
+      is_retirado: false
     });
     setEditingInvoice(null);
     setShowModal(false);
@@ -167,7 +170,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       individual_name: inv.individual_name || '',
       original_value: inv.original_value.toString(),
       due_date: inv.due_date,
-      status: inv.status
+      status: inv.status,
+      is_retirado: !!inv.is_retirado
     });
     setEditingInvoice(inv);
     setShowModal(true);
@@ -233,11 +237,16 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       if (inv.penalty_applied) {
         details = `\n(Multa: ${formatCurrency(inv.fine_value)} + Juros: ${formatCurrency(inv.interest_value)} + Taxas: ${formatCurrency(inv.reissue_tax)} e ${formatCurrency(inv.postage_tax)})`;
       }
+
+      let statusText: string = inv.status;
+      if (filter === 'INTERNET' && inv.is_retirado) {
+        statusText = `${inv.status}\n(RETIRADO)`;
+      }
       return [
         client?.name || inv.individual_name || 'Diversos',
         getDisplayNumber(inv.invoice_number),
         new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR'),
-        inv.status,
+        statusText,
         formatCurrency(inv.original_value),
         formatCurrency(inv.final_value) + details
       ];
@@ -558,7 +567,17 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                           {isSemNota ? renderStatusBadge(inv, 'assignment_late', 'text-amber-500') : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {isInternet ? renderStatusBadge(inv, 'language', 'text-blue-500') : <span className="text-slate-300">-</span>}
+                          {isInternet ? (
+                            <div className="flex flex-col items-center gap-1">
+                              {renderStatusBadge(inv, 'language', 'text-blue-500')}
+                              {inv.is_retirado && (
+                                <div className="flex items-center gap-0.5 text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
+                                  <span className="material-symbols-outlined text-[10px]">cloud_done</span>
+                                  RETIRADO
+                                </div>
+                              )}
+                            </div>
+                          ) : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {isAguardando ? renderStatusBadge(inv, 'hourglass_empty', 'text-purple-500') : <span className="text-slate-300">-</span>}
@@ -753,6 +772,28 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                     </button>
                   </div>
                 </div>
+
+                {regType === 'INTERNET' && (
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Boleto Retirado da Internet?</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewInvoice(prev => ({ ...prev, is_retirado: true }))}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.is_retirado ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                      >
+                        SIM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewInvoice(prev => ({ ...prev, is_retirado: false }))}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${!newInvoice.is_retirado ? 'bg-slate-200 text-slate-700 border-slate-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                      >
+                        NÃO
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="pt-4 flex gap-3">
                 <button

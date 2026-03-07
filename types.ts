@@ -45,6 +45,7 @@ export interface Invoice {
   postage_tax: number;
   payment_date?: string | null;
   individual_name?: string;
+  is_retirado?: boolean;
   created_at?: string;
 }
 
