@@ -239,8 +239,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       }
 
       let statusText: string = inv.status;
-      if (filter === 'INTERNET' && inv.is_retirado) {
-        statusText = `${inv.status}\n(RETIRADO)`;
+      if (filter === 'INTERNET') {
+        statusText = `${inv.status}\n(${inv.is_retirado ? 'RETIRADO' : 'NÃO RETIRADO'})`;
       }
       return [
         client?.name || inv.individual_name || 'Diversos',
@@ -570,10 +570,15 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                           {isInternet ? (
                             <div className="flex flex-col items-center gap-1">
                               {renderStatusBadge(inv, 'language', 'text-blue-500')}
-                              {inv.is_retirado && (
+                              {inv.is_retirado ? (
                                 <div className="flex items-center gap-0.5 text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
                                   <span className="material-symbols-outlined text-[10px]">cloud_done</span>
                                   RETIRADO
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5 text-[8px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-100">
+                                  <span className="material-symbols-outlined text-[10px]">cloud_off</span>
+                                  NÃO RETIRADO
                                 </div>
                               )}
                             </div>
