@@ -84,6 +84,9 @@ export interface DailyPayment {
   abertura?: string;
   parcelamentos?: string;
   certificadora?: string;
+  ativos_pix?: string;
+  inativos_pix?: string;
+  irpf?: string;
   total?: string;
   created_at?: string;
 }

@@ -12,14 +12,18 @@ interface DailyPaymentsPageProps {
 }
 
 const categoryFields: (keyof Omit<DailyPayment, 'id' | 'date' | 'created_at' | 'total'>)[] = [
-    'ativos', 'inativos', 'alteracao', 'distrato',
+    'ativos', 'ativos_pix', 'inativos', 'inativos_pix', 'irpf',
+    'alteracao', 'distrato',
     'remissao_gps', 'recal_guia', 'regularizacao',
     'rent_invest_facil', 'abertura', 'parcelamentos', 'certificadora', 'outros'
 ];
 
 const categoryLabels: Record<string, string> = {
-    ativos: 'Ativos',
-    inativos: 'Inativos',
+    ativos: 'Ativos Pago por Boleto',
+    ativos_pix: 'Ativos Pago por PIX',
+    inativos: 'Inativos Pago por Boleto',
+    inativos_pix: 'Inativos Pago por PIX',
+    irpf: 'Irpf',
     alteracao: 'Alteração',
     distrato: 'Distrato',
     remissao_gps: 'Remissão de GPS',
@@ -39,7 +43,8 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
     const [newPayment, setNewPayment] = useState<Omit<DailyPayment, 'id' | 'created_at'>>({
         date: new Date().toISOString().split('T')[0],
         description: '',
-        ativos: '', inativos: '', alteracao: '', distrato: '',
+        ativos: '', ativos_pix: '', inativos: '', inativos_pix: '', irpf: '',
+        alteracao: '', distrato: '',
         remissao_gps: '', recal_guia: '', regularizacao: '',
         rent_invest_facil: '', abertura: '', parcelamentos: '',
         certificadora: '', outros: ''
@@ -74,7 +79,8 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         setNewPayment({
             date: new Date().toISOString().split('T')[0],
             description: '',
-            ativos: '', inativos: '', alteracao: '', distrato: '',
+            ativos: '', ativos_pix: '', inativos: '', inativos_pix: '', irpf: '',
+            alteracao: '', distrato: '',
             remissao_gps: '', recal_guia: '', regularizacao: '',
             rent_invest_facil: '', abertura: '', parcelamentos: '',
             certificadora: '', outros: ''

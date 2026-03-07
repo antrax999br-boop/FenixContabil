@@ -126,7 +126,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     if (editingInvoice) {
       onUpdate({
         ...editingInvoice,
-        client_id: newInvoice.client_id,
+        client_id: newInvoice.client_id || null,
         invoice_number: finalNumber,
         original_value: parseFloat(newInvoice.original_value) || 0,
         due_date: newInvoice.due_date,

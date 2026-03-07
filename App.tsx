@@ -365,6 +365,7 @@ const App: React.FC = () => {
 
   const updateInvoice = async (invoice: Invoice) => {
     const { id, created_at, ...updateData } = invoice;
+    if (updateData.client_id === '') updateData.client_id = null;
     const { data, error } = await supabase
       .from('invoices')
       .update(updateData)
