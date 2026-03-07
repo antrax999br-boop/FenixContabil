@@ -209,7 +209,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     const doc = new jsPDF();
     const title =
       filter === 'AGUARDANDO' ? 'Relatório: Aguardando Nota Do Cliente' :
-        filter === 'INTERNET' ? 'Relatório: Boletos Pela Internet' :
+        filter === 'INTERNET' ? 'Relatório: Despesas Pela Internet' :
           'Relatório de Boletos e Registros';
     const period = `${monthFilter === 'ALL' ? 'Ano Todo' : months[monthFilter]} / ${yearFilter === 'ALL' ? 'Todos os Anos' : yearFilter}`;
 
@@ -478,7 +478,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
               <option value="ALL">📋 Visualização Geral</option>
               <option value="ATIVOS">🔥 Boletos Iniciais</option>
               <option value="SEM_NOTA">📄 Boletos Sem Nota</option>
-              <option value="INTERNET">🌐 Boletos Internet</option>
+              <option value="INTERNET">🌐 Despesas Internet</option>
               <option value="AGUARDANDO">⏳ Aguardando Nota</option>
               <option value={InvoiceStatus.PAID}>Somente Pagos</option>
               <option value={InvoiceStatus.NOT_PAID}>Somente Pendentes</option>
@@ -635,7 +635,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                       onClick={() => setRegType('INTERNET')}
                       className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${regType === 'INTERNET' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
                     >
-                      Internet
+                      Despesas Internet
                     </button>
                     <button
                       type="button"

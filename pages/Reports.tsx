@@ -121,7 +121,7 @@ const Reports: React.FC<ReportsProps> = ({ state }) => {
             const isSemNota = !isInternet && (!inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
 
             let labelPrefix = 'BOLETO ATIVO';
-            if (isInternet) labelPrefix = 'INTERNET';
+            if (isInternet) labelPrefix = 'DESPESA INTERNET';
             else if (isSemNota) labelPrefix = 'SEM NOTA';
 
             const displayNum = inv.invoice_number && inv.invoice_number !== 'S/N' ? inv.invoice_number : '';
