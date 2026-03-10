@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, Payable, CalendarEvent, AppState,
   UserProfile, InvoiceStatus, DailyPayment, CreditCardExpense, CreditCardPayment,
-  Employee, EmployeePayment, EmployeePaymentStatus
+  Employee, EmployeePayment, EmployeePaymentStatus, Contract
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +16,7 @@ import ReportsPage from './pages/Reports';
 import DailyPaymentsPage from './pages/DailyPayments';
 import CreditCardExpensesPage from './pages/CreditCardExpenses';
 import EmployeesPage from './pages/Employees';
+import ContractRenewalPage from './pages/ContractRenewal';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
@@ -38,6 +39,7 @@ const App: React.FC = () => {
     employees: [],
     employeePayments: [],
     events: [],
+    contracts: [],
     loading: true
   });
 
@@ -89,7 +91,7 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes] = await Promise.all([
         supabase.from('clients').select('*').order('name', { ascending: true }),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
@@ -98,7 +100,8 @@ const App: React.FC = () => {
         supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }),
         supabase.from('credit_card_payments').select('*'),
         supabase.from('employees').select('*').order('name', { ascending: true }),
-        supabase.from('employee_payments').select('*')
+        supabase.from('employee_payments').select('*'),
+        supabase.from('contracts').select('*')
       ]);
 
       if (profile) {
@@ -154,6 +157,7 @@ const App: React.FC = () => {
           employees: (employeesRes.data || []) as Employee[],
           employeePayments: (employeePaymentsRes.data || []) as EmployeePayment[],
           events: events,
+          contracts: (contractsRes.data || []) as Contract[],
           loading: false
         }));
       }
@@ -829,6 +833,30 @@ const App: React.FC = () => {
           onUpdateEmployee={updateEmployee}
           onDeleteEmployee={deleteEmployee}
           onUpdatePayment={updateEmployeePayment}
+        />;
+      case 'renovacao-contrato':
+        return <ContractRenewalPage
+          state={state}
+          onUpdateContract={async (contract) => {
+            const { id, created_at, ...updateData } = contract;
+            const { error } = await supabase.from('contracts').update(updateData).eq('id', id);
+            if (!error) {
+              setState(prev => ({
+                ...prev,
+                contracts: prev.contracts.map(c => c.id === id ? contract : c)
+              }));
+            } else {
+              alert('Erro ao atualizar contrato: ' + error.message);
+            }
+          }}
+          onAddContract={async (contractData) => {
+            const { data, error } = await supabase.from('contracts').insert([contractData]).select().single();
+            if (data && !error) {
+              setState(prev => ({ ...prev, contracts: [...prev.contracts, data] }));
+            } else if (error) {
+              alert('Erro ao adicionar contrato: ' + error.message);
+            }
+          }}
         />;
       case 'calendario':
         const isAdmin = state.currentUser?.email === 'laercio@laercio.com.br' || state.currentUser?.email === 'eliane@fenix.com.br';

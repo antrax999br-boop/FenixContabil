@@ -1,0 +1,316 @@
+
+import React, { useState } from 'react';
+import { AppState, Contract, Client } from '../types';
+import { formatCNPJ } from '../utils/calculations';
+
+interface ContractRenewalPageProps {
+    state: AppState;
+    onUpdateContract: (contract: Contract) => Promise<void>;
+    onAddContract: (contract: Omit<Contract, 'id'>) => Promise<void>;
+}
+
+const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpdateContract, onAddContract }) => {
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showRenewalModal, setShowRenewalModal] = useState(false);
+    const [renewalData, setRenewalData] = useState<{ client_id: string, readjustment: number }[]>([]);
+
+    const filteredClients = state.clients.filter(client => {
+        const searchLower = searchTerm.toLowerCase();
+        const searchNumbers = searchTerm.replace(/\D/g, '');
+        return client.name.toLowerCase().includes(searchLower) ||
+            (searchNumbers !== '' && client.cnpj.replace(/\D/g, '').includes(searchNumbers));
+    });
+
+    const getContract = (clientId: string, year: number) => {
+        return state.contracts.find(c => c.client_id === clientId && c.year === year);
+    };
+
+    const handleValueChange = async (clientId: string, field: keyof Contract, value: any) => {
+        const existing = getContract(clientId, selectedYear);
+        if (existing) {
+            await onUpdateContract({ ...existing, [field]: value });
+        } else {
+            // Create new contract for this year
+            const newContract: Omit<Contract, 'id'> = {
+                client_id: clientId,
+                year: selectedYear,
+                copan: '',
+                status: 'Ativo',
+                annual_duration: 'Anual',
+                due_day: 10,
+                monthly_fee: 0,
+                invoice_value: 0,
+                readjustment: 0,
+                ...({ [field]: value } as any)
+            };
+            await onAddContract(newContract);
+        }
+    };
+
+    const openRenewalModal = () => {
+        const nextYear = selectedYear + 1;
+        const initialRenewalData = state.clients.map(client => {
+            const currentContract = getContract(client.id, selectedYear);
+            return {
+                client_id: client.id,
+                readjustment: 0
+            };
+        });
+        setRenewalData(initialRenewalData);
+        setShowRenewalModal(true);
+    };
+
+    const handleBulkRenewal = async () => {
+        const nextYear = selectedYear + 1;
+        for (const item of renewalData) {
+            const currentContract = getContract(item.client_id, selectedYear);
+            const nextContract = getContract(item.client_id, nextYear);
+
+            if (!nextContract && currentContract) {
+                const newMonthlyFee = Number(currentContract.monthly_fee) + Number(item.readjustment);
+                await onAddContract({
+                    client_id: item.client_id,
+                    year: nextYear,
+                    copan: currentContract.copan,
+                    status: currentContract.status,
+                    annual_duration: currentContract.annual_duration,
+                    due_day: currentContract.due_day,
+                    monthly_fee: newMonthlyFee,
+                    invoice_value: currentContract.invoice_value, // Maintain same invoice value or reset? User didn't specify, I'll keep it.
+                    readjustment: item.readjustment
+                });
+            }
+        }
+        setSelectedYear(nextYear);
+        setShowRenewalModal(false);
+    };
+
+    return (
+        <div className="max-w-7xl mx-auto pb-20">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+                <div>
+                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Renovação de Contrato</h1>
+                    <p className="text-slate-500 text-sm mt-1">Gerencie os valores contratuais e realize renovações anuais com reajuste.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                        {[selectedYear - 1, selectedYear, selectedYear + 1].map(year => (
+                            <button
+                                key={year}
+                                onClick={() => setSelectedYear(year)}
+                                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${selectedYear === year ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+                                    }`}
+                            >
+                                {year}
+                            </button>
+                        ))}
+                    </div>
+                    <button
+                        onClick={openRenewalModal}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-orange hover:bg-orange-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+                    >
+                        <span className="material-symbols-outlined text-xl">autorenew</span>
+                        <span>Renovar para {selectedYear + 1}</span>
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+                <div className="relative flex-1 max-w-md">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                    <input
+                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 text-slate-900 outline-none"
+                        placeholder="Buscar por cliente ou CNPJ..."
+                        type="text"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[1000px]">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-48">Cliente / CNPJ</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Copan</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-28 text-center">Situação</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Vigência</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">Venc.</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Valor Mensal</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Valor Nota</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Reajuste</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {filteredClients.map(client => {
+                            const contract = getContract(client.id, selectedYear);
+                            return (
+                                <tr key={client.id} className="hover:bg-slate-50/50 transition-colors group">
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-[13px] font-bold text-slate-900 leading-tight mb-0.5">{client.name}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium tracking-wider">{formatCNPJ(client.cnpj)}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <input
+                                            type="text"
+                                            className="w-16 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
+                                            value={contract?.copan || ''}
+                                            onChange={(e) => handleValueChange(client.id, 'copan', e.target.value)}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <select
+                                            className="text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none bg-white"
+                                            value={contract?.status || 'Ativo'}
+                                            onChange={(e) => handleValueChange(client.id, 'status', e.target.value)}
+                                        >
+                                            <option value="Ativo">Ativo</option>
+                                            <option value="Inativo">Inativo</option>
+                                            <option value="Outros">Outros</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <input
+                                            type="text"
+                                            className="w-20 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
+                                            value={contract?.annual_duration || 'Anual'}
+                                            onChange={(e) => handleValueChange(client.id, 'annual_duration', e.target.value)}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <input
+                                            type="number"
+                                            className="w-12 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
+                                            value={contract?.due_day || 10}
+                                            onChange={(e) => handleValueChange(client.id, 'due_day', parseInt(e.target.value))}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <div className="relative">
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-slate-700"
+                                                value={contract?.monthly_fee || 0}
+                                                onChange={(e) => handleValueChange(client.id, 'monthly_fee', parseFloat(e.target.value))}
+                                            />
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <div className="relative">
+                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-primary"
+                                                value={contract?.invoice_value || 0}
+                                                onChange={(e) => handleValueChange(client.id, 'invoice_value', parseFloat(e.target.value))}
+                                            />
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <div className="text-xs font-bold text-slate-500">
+                                            {contract?.readjustment ? `+ R$ ${contract.readjustment.toFixed(2)}` : '-'}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {showRenewalModal && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                            <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-brand-orange">autorenew</span>
+                                Renovar Contratos para {selectedYear + 1}
+                            </h3>
+                            <button onClick={() => setShowRenewalModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto">
+                            <p className="text-sm text-slate-500 mb-6 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
+                                Insira o valor do reajuste para cada cliente. O novo valor do contrato será: <b>Valor Atual + Reajuste</b>.
+                            </p>
+
+                            <div className="space-y-3">
+                                {filteredClients.map(client => {
+                                    const currentContract = getContract(client.id, selectedYear);
+                                    const nextContract = getContract(client.id, selectedYear + 1);
+                                    const renewalItem = renewalData.find(item => item.client_id === client.id);
+
+                                    if (!currentContract) return null;
+
+                                    return (
+                                        <div key={client.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-slate-800">{client.name}</span>
+                                                <span className="text-[11px] text-slate-400">Valor Atual: R$ {currentContract.monthly_fee.toFixed(2)}</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-4">
+                                                {nextContract ? (
+                                                    <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Já Renovado</span>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Reajuste (R$)</span>
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                className="w-24 text-right text-sm p-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-orange/20 outline-none font-bold"
+                                                                value={renewalItem?.readjustment || 0}
+                                                                onChange={(e) => {
+                                                                    const val = parseFloat(e.target.value) || 0;
+                                                                    setRenewalData(prev => prev.map(item => item.client_id === client.id ? { ...item, readjustment: val } : item));
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div className="flex flex-col items-end min-w-[100px]">
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Novo Valor</span>
+                                                            <span className="text-sm font-black text-slate-900 italic">
+                                                                R$ {((currentContract.monthly_fee || 0) + (renewalItem?.readjustment || 0)).toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowRenewalModal(false)}
+                                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleBulkRenewal}
+                                className="flex-1 py-3 rounded-xl bg-brand-orange text-white font-bold text-sm hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98]"
+                            >
+                                Confirmar Renovação
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default ContractRenewalPage;

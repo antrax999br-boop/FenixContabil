@@ -20,6 +20,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, currentUserEm
     { id: 'notas', label: 'Boletos', icon: 'receipt_long' },
     { id: 'notas-ativas', label: 'Boletos Ativos', icon: 'local_fire_department' },
     { id: 'notas-sem-nota', label: 'Boletos Sem Nota', icon: 'assignment_late' },
+    { id: 'renovacao-contrato', label: 'Renovação de Contrato', icon: 'sync' },
     { id: 'notas-internet', label: 'Boletos Pela Internet', icon: 'language' },
     { id: 'notas-aguardando', label: 'Aguardando Nota Do Cliente', icon: 'hourglass_empty' },
     { id: 'contas-pagar', label: 'Contas a Pagar', icon: 'payments' },

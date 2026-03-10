@@ -143,6 +143,21 @@ export interface EmployeePayment {
   created_at?: string;
 }
 
+export interface Contract {
+  id: string; // UUID
+  client_id: string; // UUID
+  copan: string;
+  status: 'Ativo' | 'Inativo' | 'Outros';
+  annual_duration: string;
+  due_day: number;
+  monthly_fee: number;
+  invoice_value: number;
+  year: number;
+  readjustment: number;
+  created_at?: string;
+}
+
+
 export interface AppState {
   users: User[];
   clients: Client[];
@@ -154,6 +169,7 @@ export interface AppState {
   employees: Employee[];
   employeePayments: EmployeePayment[];
   events: CalendarEvent[];
+  contracts: Contract[];
   currentUser: User | null;
   loading: boolean;
 }
