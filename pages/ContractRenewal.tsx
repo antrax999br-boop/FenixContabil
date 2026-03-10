@@ -61,6 +61,8 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
             if (!nextContract && currentContract) {
                 const newMonthlyFee = Number(currentContract.monthly_fee) + Number(item.readjustment);
+                const newInvoiceValue = Number(currentContract.invoice_value) + Number(item.readjustment);
+
                 await onSaveContract({
                     client_id: item.client_id,
                     year: nextYear,
@@ -69,7 +71,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                     annual_duration: currentContract.annual_duration,
                     due_day: currentContract.due_day,
                     monthly_fee: newMonthlyFee,
-                    invoice_value: currentContract.invoice_value,
+                    invoice_value: newInvoiceValue,
                     readjustment: item.readjustment
                 } as Contract);
             }
@@ -263,7 +265,10 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                         <div key={client.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-slate-800">{client.name}</span>
-                                                <span className="text-[11px] text-slate-400">Valor Atual: R$ {currentContract.monthly_fee.toFixed(2)}</span>
+                                                <div className="flex gap-3 mt-0.5">
+                                                    <span className="text-[10px] text-slate-400">Mensal: R$ {currentContract.monthly_fee.toFixed(2)}</span>
+                                                    <span className="text-[10px] text-slate-400">Nota: R$ {currentContract.invoice_value.toFixed(2)}</span>
+                                                </div>
                                             </div>
 
                                             <div className="flex items-center gap-4">
@@ -284,11 +289,16 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                                                 }}
                                                             />
                                                         </div>
-                                                        <div className="flex flex-col items-end min-w-[100px]">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Novo Valor</span>
-                                                            <span className="text-sm font-black text-slate-900 italic">
-                                                                R$ {((currentContract.monthly_fee || 0) + (renewalItem?.readjustment || 0)).toFixed(2)}
-                                                            </span>
+                                                        <div className="flex flex-col items-end min-w-[120px]">
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase">Novos Valores</span>
+                                                            <div className="flex flex-col items-end">
+                                                                <span className="text-[11px] font-black text-slate-900 italic">
+                                                                    Mensal: R$ {((currentContract.monthly_fee || 0) + (renewalItem?.readjustment || 0)).toFixed(2)}
+                                                                </span>
+                                                                <span className="text-[11px] font-black text-primary italic">
+                                                                    Nota: R$ {((currentContract.invoice_value || 0) + (renewalItem?.readjustment || 0)).toFixed(2)}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </>
                                                 )}
