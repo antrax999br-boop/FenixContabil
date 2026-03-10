@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { AppState, Contract, Client } from '../types';
-import { formatCNPJ } from '../utils/calculations';
+import { AppState, Contract } from '../types';
+import { formatCNPJ, formatCurrency } from '../utils/calculations';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ContractRenewalPageProps {
     state: AppState;
@@ -26,6 +28,72 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
     const getContract = (clientId: string, year: number) => {
         return state.contracts.find(c => c.client_id === clientId && c.year === year);
+    };
+
+    const generateRenewalPDF = (nextYear: number, updatedContracts: any[]) => {
+        const doc = new jsPDF();
+
+        // Header Background
+        doc.setFillColor(15, 23, 42); // Navy 900
+        doc.rect(0, 0, 210, 40, 'F');
+
+        // Header Text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Relatório de Renovação Contratual', 14, 20);
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Ano de Referência: ${nextYear}`, 14, 30);
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+
+        const tableData = updatedContracts.map(item => {
+            const client = state.clients.find(c => c.id === item.client_id);
+            const prev = item.prevContract;
+            return [
+                client?.name || 'Desconhecido',
+                formatCurrency(prev?.monthly_fee || 0),
+                formatCurrency(prev?.invoice_value || 0),
+                `+ ${formatCurrency(item.readjustment)}`,
+                formatCurrency(item.newMonthlyFee),
+                formatCurrency(item.newInvoiceValue)
+            ];
+        });
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['Cliente', 'Ant. Mensal', 'Ant. Nota', 'Reajuste', 'Novo Mensal', 'Novo Nota']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [249, 115, 22], textColor: [255, 255, 255] }, // Brand orange
+            styles: { fontSize: 8 },
+            columnStyles: {
+                1: { halign: 'right' },
+                2: { halign: 'right' },
+                3: { halign: 'right', fontStyle: 'bold' },
+                4: { halign: 'right', fontStyle: 'bold' },
+                5: { halign: 'right', fontStyle: 'bold' }
+            }
+        });
+
+        const totalOld = updatedContracts.reduce((acc, item) => acc + (item.prevContract?.monthly_fee || 0), 0);
+        const totalNew = updatedContracts.reduce((acc, item) => acc + item.newMonthlyFee, 0);
+        const totalReadjust = updatedContracts.reduce((acc, item) => acc + item.readjustment, 0);
+
+        let currentY = (doc as any).lastAutoTable.finalY + 15;
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+        doc.text(`Total Anterior: ${formatCurrency(totalOld)}`, 196, currentY, { align: 'right' });
+        currentY += 6;
+        doc.text(`Total Reajustes: ${formatCurrency(totalReadjust)}`, 196, currentY, { align: 'right' });
+        currentY += 8;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(249, 115, 22);
+        doc.text(`NOVO TOTAL MENSAL: ${formatCurrency(totalNew)}`, 196, currentY, { align: 'right' });
+
+        doc.save(`Renovacao_Contratos_${nextYear}.pdf`);
     };
 
     const handleBlurSave = async (clientId: string, field: keyof Contract, value: any) => {
@@ -62,11 +130,23 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
     const handleBulkRenewal = async () => {
         const nextYear = selectedYear + 1;
-        for (const item of renewalData) {
+        const itemsToRenew = renewalData.filter(item => {
             const currentContract = getContract(item.client_id, selectedYear);
             const nextContract = getContract(item.client_id, nextYear);
+            return currentContract && !nextContract;
+        });
 
-            if (!nextContract && currentContract) {
+        if (itemsToRenew.length === 0) {
+            alert('Nenhum contrato novo para renovar.');
+            return;
+        }
+
+        const updatedContractsReport = [];
+
+        for (const item of itemsToRenew) {
+            const currentContract = getContract(item.client_id, selectedYear);
+
+            if (currentContract) {
                 const newMonthlyFee = Number(currentContract.monthly_fee) + Number(item.readjustment);
                 const newInvoiceValue = Number(currentContract.invoice_value) + Number(item.readjustment);
 
@@ -81,8 +161,21 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                     invoice_value: newInvoiceValue,
                     readjustment: item.readjustment
                 } as Contract);
+
+                updatedContractsReport.push({
+                    client_id: item.client_id,
+                    prevContract: currentContract,
+                    readjustment: item.readjustment,
+                    newMonthlyFee,
+                    newInvoiceValue
+                });
             }
         }
+
+        if (confirm('Renovação concluída! Deseja emitir o relatório PDF das renovações agora?')) {
+            generateRenewalPDF(nextYear, updatedContractsReport);
+        }
+
         setSelectedYear(nextYear);
         setShowRenewalModal(false);
     };
