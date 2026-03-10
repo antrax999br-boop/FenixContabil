@@ -5,9 +5,10 @@ import { formatCNPJ } from '../utils/calculations';
 interface ContractRenewalPageProps {
     state: AppState;
     onSaveContract: (contract: Contract) => Promise<void>;
+    onDeleteContract: (id: string) => Promise<void>;
 }
 
-const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSaveContract }) => {
+const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSaveContract, onDeleteContract }) => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [searchTerm, setSearchTerm] = useState('');
     const [showRenewalModal, setShowRenewalModal] = useState(false);
@@ -51,6 +52,12 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             delete next[`${clientId}-${field}`];
             return next;
         });
+    };
+
+    const handleDelete = async (contractId: string) => {
+        if (confirm('Deseja realmente cancelar/excluir este contrato para este ano?')) {
+            await onDeleteContract(contractId);
+        }
     };
 
     const handleBulkRenewal = async () => {
@@ -134,14 +141,15 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                 <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-48">Cliente / CNPJ</th>
-                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Copan</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-40">Cliente / CNPJ</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">Copan</th>
                             <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-28 text-center">Situação</th>
                             <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Vigência</th>
                             <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 text-center">Venc.</th>
                             <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Valor Mensal</th>
                             <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Valor Nota</th>
                             <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Reajuste</th>
+                            <th className="px-4 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -227,6 +235,18 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                         <div className="text-xs font-bold text-slate-500">
                                             {contract?.readjustment ? `+ R$ ${contract.readjustment.toFixed(2)}` : '-'}
                                         </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        {contract && (
+                                            <button
+                                                onClick={() => handleDelete(contract.id)}
+                                                className="p-1 px-2 bg-red-50 text-red-500 hover:bg-red-100 rounded text-xs font-bold flex items-center gap-1 transition-colors"
+                                                title="Cancelar/Excluir Renovação"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                Limpar
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             );

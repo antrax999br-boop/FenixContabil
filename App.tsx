@@ -857,6 +857,14 @@ const App: React.FC = () => {
               alert('Erro ao salvar contrato: ' + error.message);
             }
           }}
+          onDeleteContract={async (id) => {
+            const { error } = await supabase.from('contracts').delete().eq('id', id);
+            if (!error) {
+              setState(prev => ({ ...prev, contracts: prev.contracts.filter(c => c.id !== id) }));
+            } else {
+              alert('Erro ao excluir contrato: ' + error.message);
+            }
+          }}
         />;
       case 'calendario':
         const isAdmin = state.currentUser?.email === 'laercio@laercio.com.br' || state.currentUser?.email === 'eliane@fenix.com.br';
