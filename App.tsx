@@ -837,24 +837,24 @@ const App: React.FC = () => {
       case 'renovacao-contrato':
         return <ContractRenewalPage
           state={state}
-          onUpdateContract={async (contract) => {
-            const { id, created_at, ...updateData } = contract;
-            const { error } = await supabase.from('contracts').update(updateData).eq('id', id);
-            if (!error) {
-              setState(prev => ({
-                ...prev,
-                contracts: prev.contracts.map(c => c.id === id ? contract : c)
-              }));
-            } else {
-              alert('Erro ao atualizar contrato: ' + error.message);
-            }
-          }}
-          onAddContract={async (contractData) => {
-            const { data, error } = await supabase.from('contracts').insert([contractData]).select().single();
+          onSaveContract={async (contractData) => {
+            // Remove 'id' if it's a new record or 'created_at' to avoid issues
+            const { created_at, ...dataToSave } = contractData;
+
+            const { data, error } = await supabase
+              .from('contracts')
+              .upsert(dataToSave, { onConflict: 'client_id,year' })
+              .select()
+              .single();
+
             if (data && !error) {
-              setState(prev => ({ ...prev, contracts: [...prev.contracts, data] }));
+              setState(prev => {
+                const filtered = prev.contracts.filter(c => c.id !== data.id);
+                return { ...prev, contracts: [...filtered, data] };
+              });
             } else if (error) {
-              alert('Erro ao adicionar contrato: ' + error.message);
+              console.error('Supabase error:', error);
+              alert('Erro ao salvar contrato: ' + error.message);
             }
           }}
         />;

@@ -1,19 +1,20 @@
-
 import React, { useState } from 'react';
 import { AppState, Contract, Client } from '../types';
 import { formatCNPJ } from '../utils/calculations';
 
 interface ContractRenewalPageProps {
     state: AppState;
-    onUpdateContract: (contract: Contract) => Promise<void>;
-    onAddContract: (contract: Omit<Contract, 'id'>) => Promise<void>;
+    onSaveContract: (contract: Contract) => Promise<void>;
 }
 
-const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpdateContract, onAddContract }) => {
+const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSaveContract }) => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [searchTerm, setSearchTerm] = useState('');
     const [showRenewalModal, setShowRenewalModal] = useState(false);
     const [renewalData, setRenewalData] = useState<{ client_id: string, readjustment: number }[]>([]);
+
+    // Local state for inputs to allow smooth typing without immediate DB hits
+    const [localValues, setLocalValues] = useState<Record<string, any>>({});
 
     const filteredClients = state.clients.filter(client => {
         const searchLower = searchTerm.toLowerCase();
@@ -26,13 +27,11 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
         return state.contracts.find(c => c.client_id === clientId && c.year === year);
     };
 
-    const handleValueChange = async (clientId: string, field: keyof Contract, value: any) => {
+    const handleBlurSave = async (clientId: string, field: keyof Contract, value: any) => {
         const existing = getContract(clientId, selectedYear);
-        if (existing) {
-            await onUpdateContract({ ...existing, [field]: value });
-        } else {
-            // Create new contract for this year
-            const newContract: Omit<Contract, 'id'> = {
+        const contractData: any = existing
+            ? { ...existing, [field]: value }
+            : {
                 client_id: clientId,
                 year: selectedYear,
                 copan: '',
@@ -42,23 +41,16 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                 monthly_fee: 0,
                 invoice_value: 0,
                 readjustment: 0,
-                ...({ [field]: value } as any)
+                [field]: value
             };
-            await onAddContract(newContract);
-        }
-    };
 
-    const openRenewalModal = () => {
-        const nextYear = selectedYear + 1;
-        const initialRenewalData = state.clients.map(client => {
-            const currentContract = getContract(client.id, selectedYear);
-            return {
-                client_id: client.id,
-                readjustment: 0
-            };
+        await onSaveContract(contractData);
+        // Clear local value after save
+        setLocalValues(prev => {
+            const next = { ...prev };
+            delete next[`${clientId}-${field}`];
+            return next;
         });
-        setRenewalData(initialRenewalData);
-        setShowRenewalModal(true);
     };
 
     const handleBulkRenewal = async () => {
@@ -69,7 +61,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
 
             if (!nextContract && currentContract) {
                 const newMonthlyFee = Number(currentContract.monthly_fee) + Number(item.readjustment);
-                await onAddContract({
+                await onSaveContract({
                     client_id: item.client_id,
                     year: nextYear,
                     copan: currentContract.copan,
@@ -77,9 +69,9 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                     annual_duration: currentContract.annual_duration,
                     due_day: currentContract.due_day,
                     monthly_fee: newMonthlyFee,
-                    invoice_value: currentContract.invoice_value, // Maintain same invoice value or reset? User didn't specify, I'll keep it.
+                    invoice_value: currentContract.invoice_value,
                     readjustment: item.readjustment
-                });
+                } as Contract);
             }
         }
         setSelectedYear(nextYear);
@@ -107,7 +99,14 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                         ))}
                     </div>
                     <button
-                        onClick={openRenewalModal}
+                        onClick={() => {
+                            const initialRenewalData = state.clients.map(client => ({
+                                client_id: client.id,
+                                readjustment: 0
+                            }));
+                            setRenewalData(initialRenewalData);
+                            setShowRenewalModal(true);
+                        }}
                         className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-orange hover:bg-orange-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
                     >
                         <span className="material-symbols-outlined text-xl">autorenew</span>
@@ -146,6 +145,10 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                     <tbody className="divide-y divide-slate-100">
                         {filteredClients.map(client => {
                             const contract = getContract(client.id, selectedYear);
+
+                            const getVal = (field: string) => localValues[`${client.id}-${field}`] ?? (contract as any)?.[field] ?? '';
+                            const setVal = (field: string, val: any) => setLocalValues(prev => ({ ...prev, [`${client.id}-${field}`]: val }));
+
                             return (
                                 <tr key={client.id} className="hover:bg-slate-50/50 transition-colors group">
                                     <td className="px-4 py-3">
@@ -158,15 +161,16 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                                         <input
                                             type="text"
                                             className="w-16 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
-                                            value={contract?.copan || ''}
-                                            onChange={(e) => handleValueChange(client.id, 'copan', e.target.value)}
+                                            value={getVal('copan')}
+                                            onChange={(e) => setVal('copan', e.target.value)}
+                                            onBlur={(e) => handleBlurSave(client.id, 'copan', e.target.value)}
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <select
                                             className="text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none bg-white"
                                             value={contract?.status || 'Ativo'}
-                                            onChange={(e) => handleValueChange(client.id, 'status', e.target.value)}
+                                            onChange={(e) => handleBlurSave(client.id, 'status', e.target.value)}
                                         >
                                             <option value="Ativo">Ativo</option>
                                             <option value="Inativo">Inativo</option>
@@ -177,16 +181,18 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                                         <input
                                             type="text"
                                             className="w-20 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
-                                            value={contract?.annual_duration || 'Anual'}
-                                            onChange={(e) => handleValueChange(client.id, 'annual_duration', e.target.value)}
+                                            value={getVal('annual_duration') || (contract ? '' : 'Anual')}
+                                            onChange={(e) => setVal('annual_duration', e.target.value)}
+                                            onBlur={(e) => handleBlurSave(client.id, 'annual_duration', e.target.value)}
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         <input
                                             type="number"
                                             className="w-12 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
-                                            value={contract?.due_day || 10}
-                                            onChange={(e) => handleValueChange(client.id, 'due_day', parseInt(e.target.value))}
+                                            value={getVal('due_day') || (contract ? '' : 10)}
+                                            onChange={(e) => setVal('due_day', e.target.value)}
+                                            onBlur={(e) => handleBlurSave(client.id, 'due_day', parseInt(e.target.value))}
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-center">
@@ -196,8 +202,9 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                                                 type="number"
                                                 step="0.01"
                                                 className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-slate-700"
-                                                value={contract?.monthly_fee || 0}
-                                                onChange={(e) => handleValueChange(client.id, 'monthly_fee', parseFloat(e.target.value))}
+                                                value={getVal('monthly_fee') || (contract ? 0 : '')}
+                                                onChange={(e) => setVal('monthly_fee', e.target.value)}
+                                                onBlur={(e) => handleBlurSave(client.id, 'monthly_fee', parseFloat(e.target.value))}
                                             />
                                         </div>
                                     </td>
@@ -208,8 +215,9 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onUpda
                                                 type="number"
                                                 step="0.01"
                                                 className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-primary"
-                                                value={contract?.invoice_value || 0}
-                                                onChange={(e) => handleValueChange(client.id, 'invoice_value', parseFloat(e.target.value))}
+                                                value={getVal('invoice_value') || (contract ? 0 : '')}
+                                                onChange={(e) => setVal('invoice_value', e.target.value)}
+                                                onBlur={(e) => handleBlurSave(client.id, 'invoice_value', parseFloat(e.target.value))}
                                             />
                                         </div>
                                     </td>
