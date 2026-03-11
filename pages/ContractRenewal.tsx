@@ -15,23 +15,27 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [searchTerm, setSearchTerm] = useState('');
     const [showRenewalModal, setShowRenewalModal] = useState(false);
-    const [renewalData, setRenewalData] = useState<{ client_id: string, readjustment: number }[]>([]);
+    const [renewalReadjustments, setRenewalReadjustments] = useState<Record<string, number>>({});
+    const [isRenewing, setIsRenewing] = useState(false);
 
     // Local state for inputs to allow smooth typing without immediate DB hits
     const [localValues, setLocalValues] = useState<Record<string, any>>({});
 
-    const filteredClients = state.clients.filter(client => {
-        const searchLower = searchTerm.toLowerCase();
-        const searchNumbers = searchTerm.replace(/\D/g, '');
-        return client.name.toLowerCase().includes(searchLower) ||
-            (searchNumbers !== '' && client.cnpj.replace(/\D/g, '').includes(searchNumbers));
-    });
+    // Optimization: Pre-calculate a nested map for O(1) contract lookups: map[year][client_id]
+    const contractsMap = React.useMemo(() => {
+        const map: Record<number, Record<string, Contract>> = {};
+        state.contracts.forEach(c => {
+            if (!map[c.year]) map[c.year] = {};
+            map[c.year][c.client_id] = c;
+        });
+        return map;
+    }, [state.contracts]);
 
     const getContract = (clientId: string, year: number) => {
-        return state.contracts.find(c => c.client_id === clientId && c.year === year);
+        return contractsMap[year]?.[clientId];
     };
 
-    // Optimization: Create a map of the last contract for each client once per render
+    // Optimization: Create a map of the last contract for each client
     const lastContractsMap = React.useMemo(() => {
         const map: Record<string, Contract> = {};
         const sorted = [...state.contracts].sort((a, b) => b.year - a.year);
@@ -40,6 +44,15 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
         });
         return map;
     }, [state.contracts]);
+
+    const filteredClients = React.useMemo(() => {
+        const searchLower = searchTerm.toLowerCase();
+        const searchNumbers = searchTerm.replace(/\D/g, '');
+        return state.clients.filter(client => {
+            return client.name.toLowerCase().includes(searchLower) ||
+                (searchNumbers !== '' && client.cnpj.replace(/\D/g, '').includes(searchNumbers));
+        });
+    }, [state.clients, searchTerm]);
 
 
     const generateRenewalPDF = (nextYear: number, updatedContracts: any[]) => {
@@ -347,76 +360,85 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
     };
 
     const handleBulkRenewal = async () => {
-        const nextYear = selectedYear + 1;
-        const itemsToRenew = renewalData.filter(item => {
-            const currentContract = getContract(item.client_id, selectedYear);
-            const nextContract = getContract(item.client_id, nextYear);
-            return currentContract && !nextContract;
-        });
+        if (isRenewing) return;
+        setIsRenewing(true);
 
-        if (itemsToRenew.length === 0) {
-            alert('Nenhum contrato novo para renovar.');
-            return;
-        }
+        try {
+            const nextYear = selectedYear + 1;
 
-        const updatedContractsReport = [];
-        const contractsToSave: Contract[] = [];
+            // Collect items that have a contract this year but not next year
+            const contractsToSave: Contract[] = [];
+            const updatedContractsReport = [];
 
-        for (const item of itemsToRenew) {
-            const currentContract = getContract(item.client_id, selectedYear);
+            // Only iterate over clients that are in the filtered list (or all if preferred)
+            state.clients.forEach(client => {
+                const currentContract = getContract(client.id, selectedYear);
+                const nextContract = getContract(client.id, nextYear);
 
-            if (currentContract) {
-                const newMonthlyFee = Number(currentContract.monthly_fee) + Number(item.readjustment);
-                const newInvoiceValue = Number(currentContract.invoice_value) + Number(item.readjustment);
+                if (currentContract && !nextContract) {
+                    const readjustment = renewalReadjustments[client.id] || 0;
+                    const newMonthlyFee = Number(currentContract.monthly_fee) + Number(readjustment);
+                    const newInvoiceValue = Number(currentContract.invoice_value) + Number(readjustment);
 
-                // Update year in vigência (annual_duration)
-                let newAnnualDuration = currentContract.annual_duration;
-                if (newAnnualDuration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(newAnnualDuration)) {
-                    const parts = newAnnualDuration.split('/');
-                    if (parts.length === 3) {
-                        const yearPart = parts[2];
-                        if (yearPart.length === 2) {
-                            parts[2] = String(nextYear).slice(-2);
-                        } else {
-                            parts[2] = String(nextYear);
+                    // Update year in vigência (annual_duration)
+                    let newAnnualDuration = currentContract.annual_duration;
+                    if (newAnnualDuration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(newAnnualDuration)) {
+                        const parts = newAnnualDuration.split('/');
+                        if (parts.length === 3) {
+                            const yearPart = parts[2];
+                            if (yearPart.length === 2) {
+                                parts[2] = String(nextYear).slice(-2);
+                            } else {
+                                parts[2] = String(nextYear);
+                            }
+                            newAnnualDuration = parts.join('/');
                         }
-                        newAnnualDuration = parts.join('/');
                     }
+
+                    const newContract = {
+                        client_id: client.id,
+                        year: nextYear,
+                        copan: currentContract.copan,
+                        status: currentContract.status,
+                        annual_duration: newAnnualDuration,
+                        due_day: currentContract.due_day,
+                        monthly_fee: newMonthlyFee,
+                        invoice_value: newInvoiceValue,
+                        readjustment: readjustment
+                    } as Contract;
+
+                    contractsToSave.push(newContract);
+
+                    updatedContractsReport.push({
+                        client_id: client.id,
+                        prevContract: currentContract,
+                        readjustment: readjustment,
+                        newMonthlyFee,
+                        newInvoiceValue
+                    });
                 }
+            });
 
-                const newContract = {
-                    client_id: item.client_id,
-                    year: nextYear,
-                    copan: currentContract.copan,
-                    status: currentContract.status,
-                    annual_duration: newAnnualDuration,
-                    due_day: currentContract.due_day,
-                    monthly_fee: newMonthlyFee,
-                    invoice_value: newInvoiceValue,
-                    readjustment: item.readjustment
-                } as Contract;
-
-                contractsToSave.push(newContract);
-
-                updatedContractsReport.push({
-                    client_id: item.client_id,
-                    prevContract: currentContract,
-                    readjustment: item.readjustment,
-                    newMonthlyFee,
-                    newInvoiceValue
-                });
+            if (contractsToSave.length === 0) {
+                alert('Nenhum contrato novo para renovar.');
+                return;
             }
+
+            // Save everything at once
+            await onSaveContracts(contractsToSave);
+
+            if (confirm('Renovação concluída! Deseja emitir o relatório PDF das renovações agora?')) {
+                generateRenewalPDF(nextYear, updatedContractsReport);
+            }
+
+            setSelectedYear(nextYear);
+            setShowRenewalModal(false);
+        } catch (error) {
+            console.error('Erro na renovação em lote:', error);
+            alert('Erro durante a renovação. Verifique o console.');
+        } finally {
+            setIsRenewing(false);
         }
-
-        // Save everything at once
-        await onSaveContracts(contractsToSave);
-
-        if (confirm('Renovação concluída! Deseja emitir o relatório PDF das renovações agora?')) {
-            generateRenewalPDF(nextYear, updatedContractsReport);
-        }
-
-        setSelectedYear(nextYear);
-        setShowRenewalModal(false);
     };
 
     return (
@@ -459,11 +481,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                     </div>
                     <button
                         onClick={() => {
-                            const initialRenewalData = state.clients.map(client => ({
-                                client_id: client.id,
-                                readjustment: 0
-                            }));
-                            setRenewalData(initialRenewalData);
+                            setRenewalReadjustments({});
                             setShowRenewalModal(true);
                         }}
                         className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-orange hover:bg-orange-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95"
@@ -659,7 +677,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                 {filteredClients.map(client => {
                                     const currentContract = getContract(client.id, selectedYear);
                                     const nextContract = getContract(client.id, selectedYear + 1);
-                                    const renewalItem = renewalData.find(item => item.client_id === client.id);
+                                    const readjustment = renewalReadjustments[client.id] || 0;
 
                                     if (!currentContract) return null;
 
@@ -684,10 +702,10 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                                                 type="number"
                                                                 step="0.01"
                                                                 className="w-24 text-right text-sm p-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-orange/20 outline-none font-bold"
-                                                                value={renewalItem?.readjustment || 0}
+                                                                value={readjustment || 0}
                                                                 onChange={(e) => {
                                                                     const val = parseFloat(e.target.value) || 0;
-                                                                    setRenewalData(prev => prev.map(item => item.client_id === client.id ? { ...item, readjustment: val } : item));
+                                                                    setRenewalReadjustments(prev => ({ ...prev, [client.id]: val }));
                                                                 }}
                                                             />
                                                         </div>
@@ -695,10 +713,10 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                                             <span className="text-[9px] font-bold text-slate-400 uppercase">Novos Valores</span>
                                                             <div className="flex flex-col items-end">
                                                                 <span className="text-[11px] font-black text-slate-900 italic">
-                                                                    Mensal: R$ {((currentContract.monthly_fee || 0) + (renewalItem?.readjustment || 0)).toFixed(2)}
+                                                                    Mensal: R$ {((currentContract.monthly_fee || 0) + readjustment).toFixed(2)}
                                                                 </span>
                                                                 <span className="text-[11px] font-black text-primary italic">
-                                                                    Nota: R$ {((currentContract.invoice_value || 0) + (renewalItem?.readjustment || 0)).toFixed(2)}
+                                                                    Nota: R$ {((currentContract.invoice_value || 0) + readjustment).toFixed(2)}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -716,14 +734,17 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                 type="button"
                                 onClick={() => setShowRenewalModal(false)}
                                 className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+                                disabled={isRenewing}
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleBulkRenewal}
-                                className="flex-1 py-3 rounded-xl bg-brand-orange text-white font-bold text-sm hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98]"
+                                disabled={isRenewing}
+                                className={`flex-1 py-3 rounded-xl text-white font-bold text-sm shadow-lg transition-all active:scale-[0.98] ${isRenewing ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-orange hover:bg-orange-600 shadow-orange-500/20'
+                                    }`}
                             >
-                                Confirmar Renovação
+                                {isRenewing ? 'Processando...' : 'Confirmar Renovação'}
                             </button>
                         </div>
                     </div>
