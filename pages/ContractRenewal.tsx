@@ -199,7 +199,6 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
     const generateOverdueRenewalPDF = () => {
         const doc = new jsPDF();
-        const currentYear = new Date().getFullYear();
 
         doc.setFillColor(153, 27, 27); // Red 800
         doc.rect(0, 0, 210, 40, 'F');
@@ -209,11 +208,12 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
         doc.text('Relatório de Renovações Pendentes', 14, 20);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+        doc.text(`Ano Alvo: ${selectedYear} - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
 
         const pendingClients = state.clients.filter(client => {
-            const hasCurrentOrFutureContract = state.contracts.some(c => c.client_id === client.id && c.year >= currentYear);
-            return !hasCurrentOrFutureContract;
+            const hasTargetContract = state.contracts.some(c => c.client_id === client.id && c.year === selectedYear);
+            // Consider pending if it doesn't have a contract for the selected year
+            return !hasTargetContract;
         });
 
         const monthNames = [
@@ -228,7 +228,10 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                 .filter(c => c.client_id === client.id)
                 .sort((a, b) => b.year - a.year)[0];
 
-            let monthIdx = 12; // Default to 'Sem Mês Definido'
+            // Don't show as pending if it was explicitly marked as Inactive in the last contract
+            if (lastContract?.status === 'Inativo') return;
+
+            let monthIdx = 12; // Default
             if (lastContract?.annual_duration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(lastContract.annual_duration)) {
                 const parts = lastContract.annual_duration.split('/');
                 const month = parseInt(parts[1]);
@@ -241,7 +244,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             groupedClients[monthKey].push({
                 name: client.name,
                 cnpj: formatCNPJ(client.cnpj),
-                lastYear: lastContract ? `Último em ${lastContract.year}` : 'Sem contrato',
+                lastYear: lastContract ? `Último contrato: ${lastContract.year}` : 'Sem contrato registrado',
                 lastValue: lastContract ? formatCurrency(lastContract.monthly_fee) : 'N/A',
                 vigencia: lastContract?.annual_duration || '-'
             });
@@ -249,6 +252,12 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
         let currentY = 50;
         const sortedMonthKeys = monthNames.filter(m => groupedClients[m]);
+
+        if (sortedMonthKeys.length === 0) {
+            doc.setFontSize(12);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Nenhuma renovação pendente para o ano selecionado.', 14, 60);
+        }
 
         sortedMonthKeys.forEach(month => {
             if (currentY > 250) {
@@ -259,7 +268,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
             doc.setTextColor(153, 27, 27);
-            doc.text(`Mês da última vigência: ${month}`, 14, currentY);
+            doc.text(`Renovação Esperada: ${month}`, 14, currentY);
             currentY += 5;
 
             const tableData = groupedClients[month].map(item => [
@@ -272,7 +281,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
             autoTable(doc, {
                 startY: currentY,
-                head: [['Cliente', 'CNPJ', 'Vigência', 'Ano', 'Valor Anterior']],
+                head: [['Cliente', 'CNPJ', 'Vigência Ant.', 'Ref.', 'Valor Anterior']],
                 body: tableData,
                 theme: 'grid',
                 headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255] },
@@ -283,7 +292,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             currentY = (doc as any).lastAutoTable.finalY + 15;
         });
 
-        doc.save(`Renovacoes_Pendentes_por_Mes_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Renovacoes_Pendentes_${selectedYear}_por_Mes.pdf`);
     };
 
     const handleBlurSave = async (clientId: string, field: keyof Contract, value: any) => {
@@ -479,9 +488,15 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
                             filteredClients.forEach(client => {
                                 const contract = getContract(client.id, selectedYear);
+
+                                // If current contract is missing, find last available one to determine the month
+                                const referenceContract = contract || [...state.contracts]
+                                    .filter(c => c.client_id === client.id)
+                                    .sort((a, b) => b.year - a.year)[0];
+
                                 let monthIdx = 12; // Default
-                                if (contract?.annual_duration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(contract.annual_duration)) {
-                                    const month = parseInt(contract.annual_duration.split('/')[1]);
+                                if (referenceContract?.annual_duration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(referenceContract.annual_duration)) {
+                                    const month = parseInt(referenceContract.annual_duration.split('/')[1]);
                                     if (month >= 1 && month <= 12) monthIdx = month - 1;
                                 }
                                 const monthKey = monthNames[monthIdx];
