@@ -838,7 +838,6 @@ const App: React.FC = () => {
         return <ContractRenewalPage
           state={state}
           onSaveContract={async (contractData) => {
-            // Remove 'id' if it's a new record or 'created_at' to avoid issues
             const { created_at, ...dataToSave } = contractData;
 
             const { data, error } = await supabase
@@ -853,8 +852,25 @@ const App: React.FC = () => {
                 return { ...prev, contracts: [...filtered, data] };
               });
             } else if (error) {
-              console.error('Supabase error:', error);
               alert('Erro ao salvar contrato: ' + error.message);
+            }
+          }}
+          onSaveContracts={async (contractsList) => {
+            const cleanedList = contractsList.map(({ created_at, ...rest }) => rest);
+
+            const { data, error } = await supabase
+              .from('contracts')
+              .upsert(cleanedList, { onConflict: 'client_id,year' })
+              .select();
+
+            if (data && !error) {
+              setState(prev => {
+                const newIds = data.map(d => d.id);
+                const filtered = prev.contracts.filter(c => !newIds.includes(c.id));
+                return { ...prev, contracts: [...filtered, ...data] };
+              });
+            } else if (error) {
+              alert('Erro ao salvar contratos: ' + error.message);
             }
           }}
           onDeleteContract={async (id) => {

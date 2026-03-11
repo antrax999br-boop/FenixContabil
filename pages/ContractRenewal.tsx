@@ -7,10 +7,11 @@ import autoTable from 'jspdf-autotable';
 interface ContractRenewalPageProps {
     state: AppState;
     onSaveContract: (contract: Contract) => Promise<void>;
+    onSaveContracts: (contracts: Contract[]) => Promise<void>;
     onDeleteContract: (id: string) => Promise<void>;
 }
 
-const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSaveContract, onDeleteContract }) => {
+const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSaveContract, onSaveContracts, onDeleteContract }) => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [searchTerm, setSearchTerm] = useState('');
     const [showRenewalModal, setShowRenewalModal] = useState(false);
@@ -29,6 +30,17 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
     const getContract = (clientId: string, year: number) => {
         return state.contracts.find(c => c.client_id === clientId && c.year === year);
     };
+
+    // Optimization: Create a map of the last contract for each client once per render
+    const lastContractsMap = React.useMemo(() => {
+        const map: Record<string, Contract> = {};
+        const sorted = [...state.contracts].sort((a, b) => b.year - a.year);
+        sorted.forEach(c => {
+            if (!map[c.client_id]) map[c.client_id] = c;
+        });
+        return map;
+    }, [state.contracts]);
+
 
     const generateRenewalPDF = (nextYear: number, updatedContracts: any[]) => {
         const doc = new jsPDF();
@@ -348,6 +360,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
         }
 
         const updatedContractsReport = [];
+        const contractsToSave: Contract[] = [];
 
         for (const item of itemsToRenew) {
             const currentContract = getContract(item.client_id, selectedYear);
@@ -371,7 +384,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                     }
                 }
 
-                await onSaveContract({
+                const newContract = {
                     client_id: item.client_id,
                     year: nextYear,
                     copan: currentContract.copan,
@@ -381,7 +394,9 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                     monthly_fee: newMonthlyFee,
                     invoice_value: newInvoiceValue,
                     readjustment: item.readjustment
-                } as Contract);
+                } as Contract;
+
+                contractsToSave.push(newContract);
 
                 updatedContractsReport.push({
                     client_id: item.client_id,
@@ -392,6 +407,9 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                 });
             }
         }
+
+        // Save everything at once
+        await onSaveContracts(contractsToSave);
 
         if (confirm('Renovação concluída! Deseja emitir o relatório PDF das renovações agora?')) {
             generateRenewalPDF(nextYear, updatedContractsReport);
@@ -496,10 +514,8 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                             filteredClients.forEach(client => {
                                 const contract = getContract(client.id, selectedYear);
 
-                                // If current contract is missing, find last available one to determine the month
-                                const referenceContract = contract || [...state.contracts]
-                                    .filter(c => c.client_id === client.id)
-                                    .sort((a, b) => b.year - a.year)[0];
+                                // Optimization: use pre-calculated map instead of filtering on the fly
+                                const referenceContract = contract || lastContractsMap[client.id];
 
                                 let monthIdx = 12; // Default
                                 if (referenceContract?.annual_duration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(referenceContract.annual_duration)) {
