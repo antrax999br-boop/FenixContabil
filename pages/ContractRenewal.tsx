@@ -98,7 +98,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
     const generateAnnualReportPDF = () => {
         const doc = new jsPDF();
-        doc.setFillColor(15, 23, 42);
+        doc.setFillColor(15, 23, 42); // Navy 900
         doc.rect(0, 0, 210, 40, 'F');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
@@ -109,41 +109,90 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
         doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
 
         const yearContracts = state.contracts.filter(c => c.year === selectedYear);
-        const tableData = yearContracts.map(c => {
+
+        const monthNames = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro', 'Sem Mês Definido'
+        ];
+
+        const groupedContracts: Record<string, any[]> = {};
+
+        yearContracts.forEach(c => {
+            let monthIdx = 12; // Default
+            if (c.annual_duration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(c.annual_duration)) {
+                const month = parseInt(c.annual_duration.split('/')[1]);
+                if (month >= 1 && month <= 12) monthIdx = month - 1;
+            }
+
+            const monthKey = monthNames[monthIdx];
+            if (!groupedContracts[monthKey]) groupedContracts[monthKey] = [];
+
             const client = state.clients.find(cl => cl.id === c.client_id);
-            return [
-                client?.name || 'Desconhecido',
-                c.copan,
-                c.status,
-                c.annual_duration,
-                c.due_day.toString(),
-                formatCurrency(c.monthly_fee),
-                formatCurrency(c.invoice_value)
-            ];
+            groupedContracts[monthKey].push({
+                clientName: client?.name || 'Desconhecido',
+                copan: c.copan,
+                status: c.status,
+                vigencia: c.annual_duration,
+                venc: c.due_day,
+                mensal: c.monthly_fee,
+                nota: c.invoice_value
+            });
         });
 
-        autoTable(doc, {
-            startY: 50,
-            head: [['Cliente', 'Copan', 'Status', 'Vigência', 'Venc.', 'Mensal', 'Nota']],
-            body: tableData,
-            theme: 'grid',
-            headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
-            styles: { fontSize: 8 },
-            columnStyles: {
-                5: { halign: 'right' },
-                6: { halign: 'right' }
+        let currentY = 50;
+        const sortedMonthKeys = monthNames.filter(m => groupedContracts[m]);
+
+        sortedMonthKeys.forEach(month => {
+            if (currentY > 250) {
+                doc.addPage();
+                currentY = 20;
             }
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(15, 23, 42);
+            doc.text(`Mês da Vigência: ${month}`, 14, currentY);
+            currentY += 5;
+
+            const tableData = groupedContracts[month].map(item => [
+                item.clientName,
+                item.copan,
+                item.status,
+                item.vigencia,
+                item.venc.toString(),
+                formatCurrency(item.mensal),
+                formatCurrency(item.nota)
+            ]);
+
+            autoTable(doc, {
+                startY: currentY,
+                head: [['Cliente', 'Copan', 'Status', 'Vigência', 'Venc.', 'Mensal', 'Nota']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+                styles: { fontSize: 8 },
+                columnStyles: {
+                    5: { halign: 'right' },
+                    6: { halign: 'right' }
+                }
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 15;
         });
 
         const totalMensal = yearContracts.reduce((acc, c) => acc + c.monthly_fee, 0);
         const totalNota = yearContracts.reduce((acc, c) => acc + c.invoice_value, 0);
 
-        let currentY = (doc as any).lastAutoTable.finalY + 15;
+        if (currentY > 270) {
+            doc.addPage();
+            currentY = 20;
+        }
+
         doc.setFontSize(10);
         doc.setTextColor(30, 41, 59);
-        doc.text(`Total Mensal: ${formatCurrency(totalMensal)}`, 196, currentY, { align: 'right' });
+        doc.text(`Total Mensal Geral: ${formatCurrency(totalMensal)}`, 196, currentY, { align: 'right' });
         currentY += 6;
-        doc.text(`Total Nota: ${formatCurrency(totalNota)}`, 196, currentY, { align: 'right' });
+        doc.text(`Total Nota Geral: ${formatCurrency(totalNota)}`, 196, currentY, { align: 'right' });
 
         doc.save(`Relatorio_Contratos_${selectedYear}.pdf`);
     };
@@ -420,104 +469,132 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {filteredClients.map(client => {
-                            const contract = getContract(client.id, selectedYear);
+                        {(() => {
+                            const monthNames = [
+                                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro', 'Sem Mês Definido'
+                            ];
 
-                            const getVal = (field: string) => localValues[`${client.id}-${field}`] ?? (contract as any)?.[field] ?? '';
-                            const setVal = (field: string, val: any) => setLocalValues(prev => ({ ...prev, [`${client.id}-${field}`]: val }));
+                            const groupedDisplay: Record<string, any[]> = {};
 
-                            return (
-                                <tr key={client.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-4 py-3">
-                                        <div className="flex flex-col">
-                                            <span className="text-[13px] font-bold text-slate-900 leading-tight mb-0.5">{client.name}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium tracking-wider">{formatCNPJ(client.cnpj)}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <input
-                                            type="text"
-                                            className="w-16 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
-                                            value={getVal('copan')}
-                                            onChange={(e) => setVal('copan', e.target.value)}
-                                            onBlur={(e) => handleBlurSave(client.id, 'copan', e.target.value)}
-                                        />
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <select
-                                            className="text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none bg-white"
-                                            value={contract?.status || 'Ativo'}
-                                            onChange={(e) => handleBlurSave(client.id, 'status', e.target.value)}
-                                        >
-                                            <option value="Ativo">Ativo</option>
-                                            <option value="Inativo">Inativo</option>
-                                            <option value="Outros">Outros</option>
-                                        </select>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <input
-                                            type="text"
-                                            className="w-20 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
-                                            value={getVal('annual_duration') || (contract ? '' : 'Anual')}
-                                            onChange={(e) => setVal('annual_duration', e.target.value)}
-                                            onBlur={(e) => handleBlurSave(client.id, 'annual_duration', e.target.value)}
-                                        />
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <input
-                                            type="number"
-                                            className="w-12 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
-                                            value={getVal('due_day') || (contract ? '' : 10)}
-                                            onChange={(e) => setVal('due_day', e.target.value)}
-                                            onBlur={(e) => handleBlurSave(client.id, 'due_day', parseInt(e.target.value))}
-                                        />
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-slate-700"
-                                                value={getVal('monthly_fee') || (contract ? 0 : '')}
-                                                onChange={(e) => setVal('monthly_fee', e.target.value)}
-                                                onBlur={(e) => handleBlurSave(client.id, 'monthly_fee', parseFloat(e.target.value))}
-                                            />
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-primary"
-                                                value={getVal('invoice_value') || (contract ? 0 : '')}
-                                                onChange={(e) => setVal('invoice_value', e.target.value)}
-                                                onBlur={(e) => handleBlurSave(client.id, 'invoice_value', parseFloat(e.target.value))}
-                                            />
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="text-xs font-bold text-slate-500">
-                                            {contract?.readjustment ? `+ R$ ${contract.readjustment.toFixed(2)}` : '-'}
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-3 text-right">
-                                        {contract && (
-                                            <button
-                                                onClick={() => handleDelete(contract.id)}
-                                                className="p-1 px-2 bg-red-50 text-red-500 hover:bg-red-100 rounded text-xs font-bold flex items-center gap-1 transition-colors"
-                                                title="Cancelar/Excluir Renovação"
-                                            >
-                                                <span className="material-symbols-outlined text-[14px]">delete</span>
-                                                Limpar
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                            filteredClients.forEach(client => {
+                                const contract = getContract(client.id, selectedYear);
+                                let monthIdx = 12; // Default
+                                if (contract?.annual_duration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(contract.annual_duration)) {
+                                    const month = parseInt(contract.annual_duration.split('/')[1]);
+                                    if (month >= 1 && month <= 12) monthIdx = month - 1;
+                                }
+                                const monthKey = monthNames[monthIdx];
+                                if (!groupedDisplay[monthKey]) groupedDisplay[monthKey] = [];
+                                groupedDisplay[monthKey].push({ client, contract });
+                            });
+
+                            return monthNames.filter(m => groupedDisplay[m]).map(month => (
+                                <React.Fragment key={month}>
+                                    <tr className="bg-slate-50/80">
+                                        <td colSpan={9} className="px-4 py-2 text-[11px] font-black text-primary uppercase tracking-widest border-y border-slate-200">
+                                            Vigências de {month}
+                                        </td>
+                                    </tr>
+                                    {groupedDisplay[month].map(({ client, contract }) => {
+                                        const getVal = (field: string) => localValues[`${client.id}-${field}`] ?? (contract as any)?.[field] ?? '';
+                                        const setVal = (field: string, val: any) => setLocalValues(prev => ({ ...prev, [`${client.id}-${field}`]: val }));
+
+                                        return (
+                                            <tr key={client.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[13px] font-bold text-slate-900 leading-tight mb-0.5">{client.name}</span>
+                                                        <span className="text-[10px] text-slate-400 font-medium tracking-wider">{formatCNPJ(client.cnpj)}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <input
+                                                        type="text"
+                                                        className="w-16 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
+                                                        value={getVal('copan')}
+                                                        onChange={(e) => setVal('copan', e.target.value)}
+                                                        onBlur={(e) => handleBlurSave(client.id, 'copan', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <select
+                                                        className="text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none bg-white"
+                                                        value={contract?.status || 'Ativo'}
+                                                        onChange={(e) => handleBlurSave(client.id, 'status', e.target.value)}
+                                                    >
+                                                        <option value="Ativo">Ativo</option>
+                                                        <option value="Inativo">Inativo</option>
+                                                        <option value="Outros">Outros</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <input
+                                                        type="text"
+                                                        className="w-20 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
+                                                        value={getVal('annual_duration') || (contract ? '' : 'Anual')}
+                                                        onChange={(e) => setVal('annual_duration', e.target.value)}
+                                                        onBlur={(e) => handleBlurSave(client.id, 'annual_duration', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <input
+                                                        type="number"
+                                                        className="w-12 text-center text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/20 outline-none"
+                                                        value={getVal('due_day') || (contract ? '' : 10)}
+                                                        onChange={(e) => setVal('due_day', e.target.value)}
+                                                        onBlur={(e) => handleBlurSave(client.id, 'due_day', parseInt(e.target.value))}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-slate-700"
+                                                            value={getVal('monthly_fee') || (contract ? 0 : '')}
+                                                            onChange={(e) => setVal('monthly_fee', e.target.value)}
+                                                            onBlur={(e) => handleBlurSave(client.id, 'monthly_fee', parseFloat(e.target.value))}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">R$</span>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            className="w-28 pl-7 text-right text-xs p-1 border border-slate-200 rounded focus:ring-2 focus:ring-primary/10 outline-none font-bold text-primary"
+                                                            value={getVal('invoice_value') || (contract ? 0 : '')}
+                                                            onChange={(e) => setVal('invoice_value', e.target.value)}
+                                                            onBlur={(e) => handleBlurSave(client.id, 'invoice_value', parseFloat(e.target.value))}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="text-xs font-bold text-slate-500">
+                                                        {contract?.readjustment ? `+ R$ ${contract.readjustment.toFixed(2)}` : '-'}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    {contract && (
+                                                        <button
+                                                            onClick={() => handleDelete(contract.id)}
+                                                            className="p-1 px-2 bg-red-50 text-red-500 hover:bg-red-100 rounded text-xs font-bold flex items-center gap-1 transition-colors"
+                                                            title="Cancelar/Excluir Renovação"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                            Limpar
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </React.Fragment>
+                            ));
+                        })()}
                     </tbody>
                 </table>
             </div>
