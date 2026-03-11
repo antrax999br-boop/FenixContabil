@@ -150,12 +150,27 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                 const newMonthlyFee = Number(currentContract.monthly_fee) + Number(item.readjustment);
                 const newInvoiceValue = Number(currentContract.invoice_value) + Number(item.readjustment);
 
+                // Update year in vigência (annual_duration)
+                let newAnnualDuration = currentContract.annual_duration;
+                if (newAnnualDuration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(newAnnualDuration)) {
+                    const parts = newAnnualDuration.split('/');
+                    if (parts.length === 3) {
+                        const yearPart = parts[2];
+                        if (yearPart.length === 2) {
+                            parts[2] = String(nextYear).slice(-2);
+                        } else {
+                            parts[2] = String(nextYear);
+                        }
+                        newAnnualDuration = parts.join('/');
+                    }
+                }
+
                 await onSaveContract({
                     client_id: item.client_id,
                     year: nextYear,
                     copan: currentContract.copan,
                     status: currentContract.status,
-                    annual_duration: currentContract.annual_duration,
+                    annual_duration: newAnnualDuration,
                     due_day: currentContract.due_day,
                     monthly_fee: newMonthlyFee,
                     invoice_value: newInvoiceValue,
