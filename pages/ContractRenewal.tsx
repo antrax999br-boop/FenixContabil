@@ -167,29 +167,74 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             return !hasCurrentOrFutureContract;
         });
 
-        const tableData = pendingClients.map(client => {
+        const monthNames = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro', 'Sem Mês Definido'
+        ];
+
+        const groupedClients: Record<string, any[]> = {};
+
+        pendingClients.forEach(client => {
             const lastContract = [...state.contracts]
                 .filter(c => c.client_id === client.id)
                 .sort((a, b) => b.year - a.year)[0];
 
-            return [
-                client.name,
-                formatCNPJ(client.cnpj),
-                lastContract ? `Último em ${lastContract.year}` : 'Sem contrato',
-                lastContract ? formatCurrency(lastContract.monthly_fee) : 'N/A'
-            ];
+            let monthIdx = 12; // Default to 'Sem Mês Definido'
+            if (lastContract?.annual_duration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(lastContract.annual_duration)) {
+                const parts = lastContract.annual_duration.split('/');
+                const month = parseInt(parts[1]);
+                if (month >= 1 && month <= 12) monthIdx = month - 1;
+            }
+
+            const monthKey = monthNames[monthIdx];
+            if (!groupedClients[monthKey]) groupedClients[monthKey] = [];
+
+            groupedClients[monthKey].push({
+                name: client.name,
+                cnpj: formatCNPJ(client.cnpj),
+                lastYear: lastContract ? `Último em ${lastContract.year}` : 'Sem contrato',
+                lastValue: lastContract ? formatCurrency(lastContract.monthly_fee) : 'N/A',
+                vigencia: lastContract?.annual_duration || '-'
+            });
         });
 
-        autoTable(doc, {
-            startY: 50,
-            head: [['Cliente', 'CNPJ', 'Último Contrato', 'Valor Anterior']],
-            body: tableData,
-            theme: 'grid',
-            headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255] },
-            styles: { fontSize: 9 }
+        let currentY = 50;
+        const sortedMonthKeys = monthNames.filter(m => groupedClients[m]);
+
+        sortedMonthKeys.forEach(month => {
+            if (currentY > 250) {
+                doc.addPage();
+                currentY = 20;
+            }
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(153, 27, 27);
+            doc.text(`Mês da última vigência: ${month}`, 14, currentY);
+            currentY += 5;
+
+            const tableData = groupedClients[month].map(item => [
+                item.name,
+                item.cnpj,
+                item.vigencia,
+                item.lastYear,
+                item.lastValue
+            ]);
+
+            autoTable(doc, {
+                startY: currentY,
+                head: [['Cliente', 'CNPJ', 'Vigência', 'Ano', 'Valor Anterior']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255] },
+                styles: { fontSize: 8 },
+                margin: { left: 14 }
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 15;
         });
 
-        doc.save(`Renovacoes_Pendentes_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Renovacoes_Pendentes_por_Mes_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
     const handleBlurSave = async (clientId: string, field: keyof Contract, value: any) => {
