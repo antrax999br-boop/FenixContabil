@@ -199,6 +199,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
     const generateOverdueRenewalPDF = () => {
         const doc = new jsPDF();
+        const nextYear = selectedYear + 1;
 
         // Header
         doc.setFillColor(153, 27, 27); // Deep Red
@@ -210,13 +211,14 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Ano de Referência: ${selectedYear}`, 14, 32);
+        doc.text(`Referência: Contratos de ${selectedYear} pendentes para ${nextYear}`, 14, 32);
         doc.text(`Emitido em: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 196, 32, { align: 'right' });
 
-        // Identify clients who DON'T have a contract for the selected year
-        const pendingClients = state.clients.filter(client => {
-            const hasTargetContract = state.contracts.some(c => c.client_id === client.id && c.year === selectedYear);
-            return !hasTargetContract;
+        // Logic: Find clients who HAVE an active contract in the selected year but DON'T have one in the next year
+        const baseContracts = state.contracts.filter(c => c.year === selectedYear && c.status === 'Ativo');
+
+        const pendingRenewalRows = baseContracts.filter(contract => {
+            return !state.contracts.some(nc => nc.client_id === contract.client_id && nc.year === nextYear);
         });
 
         const monthNames = [
@@ -226,23 +228,15 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
         const groupedClients: Record<string, any[]> = {};
 
-        // Grouping logic
-        pendingClients.forEach(client => {
-            // Find the most recent contract of this client (from any year)
-            const lastContract = [...state.contracts]
-                .filter(c => c.client_id === client.id)
-                .sort((a, b) => b.year - a.year)[0];
-
-            // If we have a last contract and it's 'Inativo', we might skip it (optional, based on business logic)
-            // But usually we want to see active clients that didn't renew. 
-            // If they have NO contract at all, they are definitely pending.
-            if (lastContract?.status === 'Inativo') return;
+        // Grouping logic based on the CURRENT (selectedYear) contract's month
+        pendingRenewalRows.forEach(contract => {
+            const client = state.clients.find(c => c.id === contract.client_id);
+            if (!client) return;
 
             let monthIdx = 12; // Default: 'Mês não identificado'
 
-            // Try to extract month from 'annual_duration' (Vigência)
-            if (lastContract?.annual_duration) {
-                const dateMatch = lastContract.annual_duration.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+            if (contract.annual_duration) {
+                const dateMatch = contract.annual_duration.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
                 if (dateMatch) {
                     const month = parseInt(dateMatch[2]);
                     if (month >= 1 && month <= 12) monthIdx = month - 1;
@@ -255,44 +249,40 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             groupedClients[monthKey].push({
                 name: client.name,
                 cnpj: formatCNPJ(client.cnpj),
-                lastRef: lastContract ? `Último em ${lastContract.year}` : 'Novo (Sem Contrato)',
-                lastValue: lastContract ? formatCurrency(lastContract.monthly_fee) : 'R$ 0,00',
-                vigencia: lastContract?.annual_duration || '-'
+                value: formatCurrency(contract.monthly_fee),
+                vigencia: contract.annual_duration || '-'
             });
         });
 
         let currentY = 50;
 
-        // Show months in order
         monthNames.forEach(month => {
             if (!groupedClients[month]) return;
 
-            // Check for page break before starting a new month section
             if (currentY > 240) {
                 doc.addPage();
                 currentY = 20;
             }
 
             // Month Header
-            doc.setFillColor(241, 245, 249); // light slate
+            doc.setFillColor(241, 245, 249);
             doc.rect(14, currentY - 5, 182, 10, 'F');
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.setTextColor(153, 27, 27);
-            doc.text(`Renovações Pendentes: ${month.toUpperCase()}`, 18, currentY + 2);
+            doc.text(`PENDENTE PARA ${nextYear}: ${month.toUpperCase()}`, 18, currentY + 2);
             currentY += 8;
 
             const tableData = groupedClients[month].map(item => [
                 item.name,
                 item.cnpj,
                 item.vigencia,
-                item.lastValue,
-                item.lastRef
+                item.value
             ]);
 
             autoTable(doc, {
                 startY: currentY,
-                head: [['Cliente', 'CNPJ', 'Vigência Anterior', 'Valor Mensal', 'Referência']],
+                head: [['Cliente', 'CNPJ', `Vigência (${selectedYear})`, `Valor Atual (${selectedYear})`]],
                 body: tableData,
                 theme: 'grid',
                 headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255], fontSize: 9 },
@@ -303,13 +293,13 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             currentY = (doc as any).lastAutoTable.finalY + 15;
         });
 
-        if (Object.keys(groupedClients).length === 0) {
+        if (pendingRenewalRows.length === 0) {
             doc.setFontSize(14);
             doc.setTextColor(100, 116, 139);
-            doc.text(`Não há renovações pendentes para o ano ${selectedYear}.`, 105, 100, { align: 'center' });
+            doc.text(`Tudo em dia para ${nextYear}! Todos os contratos de ${selectedYear} foram renovados.`, 105, 100, { align: 'center' });
         }
 
-        doc.save(`Relatorio_Pendencias_${selectedYear}.pdf`);
+        doc.save(`Pendencias_Renovacao_${nextYear}.pdf`);
     };
 
     const handleBlurSave = async (clientId: string, field: keyof Contract, value: any) => {
