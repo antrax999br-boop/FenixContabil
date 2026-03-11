@@ -96,6 +96,102 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
         doc.save(`Renovacao_Contratos_${nextYear}.pdf`);
     };
 
+    const generateAnnualReportPDF = () => {
+        const doc = new jsPDF();
+        doc.setFillColor(15, 23, 42);
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`Relatório de Contratos - Ano ${selectedYear}`, 14, 20);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+
+        const yearContracts = state.contracts.filter(c => c.year === selectedYear);
+        const tableData = yearContracts.map(c => {
+            const client = state.clients.find(cl => cl.id === c.client_id);
+            return [
+                client?.name || 'Desconhecido',
+                c.copan,
+                c.status,
+                c.annual_duration,
+                c.due_day.toString(),
+                formatCurrency(c.monthly_fee),
+                formatCurrency(c.invoice_value)
+            ];
+        });
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['Cliente', 'Copan', 'Status', 'Vigência', 'Venc.', 'Mensal', 'Nota']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                5: { halign: 'right' },
+                6: { halign: 'right' }
+            }
+        });
+
+        const totalMensal = yearContracts.reduce((acc, c) => acc + c.monthly_fee, 0);
+        const totalNota = yearContracts.reduce((acc, c) => acc + c.invoice_value, 0);
+
+        let currentY = (doc as any).lastAutoTable.finalY + 15;
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+        doc.text(`Total Mensal: ${formatCurrency(totalMensal)}`, 196, currentY, { align: 'right' });
+        currentY += 6;
+        doc.text(`Total Nota: ${formatCurrency(totalNota)}`, 196, currentY, { align: 'right' });
+
+        doc.save(`Relatorio_Contratos_${selectedYear}.pdf`);
+    };
+
+    const generateOverdueRenewalPDF = () => {
+        const doc = new jsPDF();
+        const currentYear = new Date().getFullYear();
+
+        doc.setFillColor(153, 27, 27); // Red 800
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Relatório de Renovações Pendentes', 14, 20);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Fenix Contábil - Emitido em: ${new Date().toLocaleDateString('pt-BR')}`, 196, 30, { align: 'right' });
+
+        const pendingClients = state.clients.filter(client => {
+            const hasCurrentOrFutureContract = state.contracts.some(c => c.client_id === client.id && c.year >= currentYear);
+            return !hasCurrentOrFutureContract;
+        });
+
+        const tableData = pendingClients.map(client => {
+            const lastContract = [...state.contracts]
+                .filter(c => c.client_id === client.id)
+                .sort((a, b) => b.year - a.year)[0];
+
+            return [
+                client.name,
+                formatCNPJ(client.cnpj),
+                lastContract ? `Último em ${lastContract.year}` : 'Sem contrato',
+                lastContract ? formatCurrency(lastContract.monthly_fee) : 'N/A'
+            ];
+        });
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['Cliente', 'CNPJ', 'Último Contrato', 'Valor Anterior']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255] },
+            styles: { fontSize: 9 }
+        });
+
+        doc.save(`Renovacoes_Pendentes_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     const handleBlurSave = async (clientId: string, field: keyof Contract, value: any) => {
         const existing = getContract(clientId, selectedYear);
         const contractData: any = existing
@@ -214,6 +310,24 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                 {year}
                             </button>
                         ))}
+                    </div>
+                    <div className="flex gap-2 mr-2">
+                        <button
+                            onClick={generateAnnualReportPDF}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shadow-md transition-all active:scale-95"
+                            title={`Gerar PDF de todos os contratos de ${selectedYear}`}
+                        >
+                            <span className="material-symbols-outlined text-lg">description</span>
+                            <span>Relatório {selectedYear}</span>
+                        </button>
+                        <button
+                            onClick={generateOverdueRenewalPDF}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-md transition-all active:scale-95"
+                            title="Gerar PDF de empresas com renovação pendente"
+                        >
+                            <span className="material-symbols-outlined text-lg">warning</span>
+                            <span>Pendências</span>
+                        </button>
                     </div>
                     <button
                         onClick={() => {
