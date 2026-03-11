@@ -35,6 +35,8 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
         return contractsMap[year]?.[clientId];
     };
 
+    const currentYearContracts = React.useMemo(() => contractsMap[selectedYear] || {}, [contractsMap, selectedYear]);
+
     // Optimization: Create a map of the last contract for each client
     const lastContractsMap = React.useMemo(() => {
         const map: Record<string, Contract> = {};
@@ -49,10 +51,30 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
         const searchLower = searchTerm.toLowerCase();
         const searchNumbers = searchTerm.replace(/\D/g, '');
         return state.clients.filter(client => {
-            return client.name.toLowerCase().includes(searchLower) ||
-                (searchNumbers !== '' && client.cnpj.replace(/\D/g, '').includes(searchNumbers));
+            const name = client.name || '';
+            const cnpj = client.cnpj || '';
+            return name.toLowerCase().includes(searchLower) ||
+                (searchNumbers !== '' && cnpj.replace(/\D/g, '').includes(searchNumbers));
         });
     }, [state.clients, searchTerm]);
+
+    // PRE-FILTER clients for the renewal modal to avoid heavy mapping during render
+    const renewalCandidates = React.useMemo(() => {
+        const nextYear = selectedYear + 1;
+        return filteredClients
+            .map(client => {
+                const current = currentYearContracts[client.id]; // Contract for selectedYear
+                const next = contractsMap[nextYear]?.[client.id]; // Contract for nextYear
+                const last = lastContractsMap[client.id]; // Latest available contract
+
+                // Candidate if: has some contract, and no contract for nextYear
+                if (last && !next) {
+                    return { client, baseContract: current || last };
+                }
+                return null;
+            })
+            .filter((item): item is { client: any, baseContract: Contract } => item !== null);
+    }, [filteredClients, contractsMap, selectedYear, lastContractsMap, currentYearContracts]);
 
 
     const generateRenewalPDF = (nextYear: number, updatedContracts: any[]) => {
@@ -365,58 +387,42 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
 
         try {
             const nextYear = selectedYear + 1;
-
-            // Collect items that have a contract this year but not next year
             const contractsToSave: Contract[] = [];
             const updatedContractsReport = [];
 
-            // Only iterate over clients that are in the filtered list (or all if preferred)
-            state.clients.forEach(client => {
-                const currentContract = getContract(client.id, selectedYear);
-                const nextContract = getContract(client.id, nextYear);
+            renewalCandidates.forEach(({ client, baseContract }) => {
+                const readjustment = renewalReadjustments[client.id] || 0;
+                const newMonthlyFee = Number(baseContract.monthly_fee || 0) + Number(readjustment);
+                const newInvoiceValue = Number(baseContract.invoice_value || 0) + Number(readjustment);
 
-                if (currentContract && !nextContract) {
-                    const readjustment = renewalReadjustments[client.id] || 0;
-                    const newMonthlyFee = Number(currentContract.monthly_fee) + Number(readjustment);
-                    const newInvoiceValue = Number(currentContract.invoice_value) + Number(readjustment);
-
-                    // Update year in vigência (annual_duration)
-                    let newAnnualDuration = currentContract.annual_duration;
-                    if (newAnnualDuration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(newAnnualDuration)) {
-                        const parts = newAnnualDuration.split('/');
-                        if (parts.length === 3) {
-                            const yearPart = parts[2];
-                            if (yearPart.length === 2) {
-                                parts[2] = String(nextYear).slice(-2);
-                            } else {
-                                parts[2] = String(nextYear);
-                            }
-                            newAnnualDuration = parts.join('/');
-                        }
+                let newAnnualDuration = baseContract.annual_duration;
+                if (newAnnualDuration && /^\d{2}\/\d{2}\/\d{2,4}$/.test(newAnnualDuration)) {
+                    const parts = newAnnualDuration.split('/');
+                    if (parts.length === 3) {
+                        parts[2] = String(nextYear).length === 2 ? String(nextYear).slice(-2) : String(nextYear);
+                        newAnnualDuration = parts.join('/');
                     }
-
-                    const newContract = {
-                        client_id: client.id,
-                        year: nextYear,
-                        copan: currentContract.copan,
-                        status: currentContract.status,
-                        annual_duration: newAnnualDuration,
-                        due_day: currentContract.due_day,
-                        monthly_fee: newMonthlyFee,
-                        invoice_value: newInvoiceValue,
-                        readjustment: readjustment
-                    } as Contract;
-
-                    contractsToSave.push(newContract);
-
-                    updatedContractsReport.push({
-                        client_id: client.id,
-                        prevContract: currentContract,
-                        readjustment: readjustment,
-                        newMonthlyFee,
-                        newInvoiceValue
-                    });
                 }
+
+                contractsToSave.push({
+                    client_id: client.id,
+                    year: nextYear,
+                    copan: baseContract.copan || '',
+                    status: baseContract.status || 'Ativo',
+                    annual_duration: newAnnualDuration || 'Anual',
+                    due_day: baseContract.due_day || 10,
+                    monthly_fee: newMonthlyFee,
+                    invoice_value: newInvoiceValue,
+                    readjustment: readjustment
+                } as Contract);
+
+                updatedContractsReport.push({
+                    client_id: client.id,
+                    prevContract: baseContract,
+                    readjustment,
+                    newMonthlyFee,
+                    newInvoiceValue
+                });
             });
 
             if (contractsToSave.length === 0) {
@@ -424,7 +430,6 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                 return;
             }
 
-            // Save everything at once
             await onSaveContracts(contractsToSave);
 
             if (confirm('Renovação concluída! Deseja emitir o relatório PDF das renovações agora?')) {
@@ -630,7 +635,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     <div className="text-xs font-bold text-slate-500">
-                                                        {contract?.readjustment ? `+ R$ ${contract.readjustment.toFixed(2)}` : '-'}
+                                                        {contract?.readjustment ? `+ R$ ${(Number(contract.readjustment) || 0).toFixed(2)}` : '-'}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
@@ -674,58 +679,54 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                             </p>
 
                             <div className="space-y-3">
-                                {filteredClients.map(client => {
-                                    const currentContract = getContract(client.id, selectedYear);
-                                    const nextContract = getContract(client.id, selectedYear + 1);
-                                    const readjustment = renewalReadjustments[client.id] || 0;
+                                {renewalCandidates.length === 0 ? (
+                                    <div className="text-center py-12 text-slate-400 font-medium">
+                                        Nenhum contrato disponível para renovação nesta visão.
+                                    </div>
+                                ) : (
+                                    renewalCandidates.map(({ client, baseContract }) => {
+                                        const readjustment = renewalReadjustments[client.id] || 0;
 
-                                    if (!currentContract) return null;
+                                        return (
+                                            <div key={client.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-800">{client.name}</span>
+                                                    <div className="flex gap-3 mt-0.5">
+                                                        <span className="text-[10px] text-slate-400">Mensal: R$ {(Number(baseContract.monthly_fee) || 0).toFixed(2)}</span>
+                                                        <span className="text-[10px] text-slate-400">Nota: R$ {(Number(baseContract.invoice_value) || 0).toFixed(2)}</span>
+                                                    </div>
+                                                </div>
 
-                                    return (
-                                        <div key={client.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-800">{client.name}</span>
-                                                <div className="flex gap-3 mt-0.5">
-                                                    <span className="text-[10px] text-slate-400">Mensal: R$ {currentContract.monthly_fee.toFixed(2)}</span>
-                                                    <span className="text-[10px] text-slate-400">Nota: R$ {currentContract.invoice_value.toFixed(2)}</span>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Reajuste (R$)</span>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            className="w-24 text-right text-sm p-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-orange/20 outline-none font-bold"
+                                                            value={readjustment || 0}
+                                                            onChange={(e) => {
+                                                                const val = parseFloat(e.target.value) || 0;
+                                                                setRenewalReadjustments(prev => ({ ...prev, [client.id]: val }));
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col items-end min-w-[120px]">
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">Novos Valores</span>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[11px] font-black text-slate-900 italic">
+                                                                Mensal: R$ {((Number(baseContract.monthly_fee) || 0) + readjustment).toFixed(2)}
+                                                            </span>
+                                                            <span className="text-[11px] font-black text-primary italic">
+                                                                Nota: R$ {((Number(baseContract.invoice_value) || 0) + readjustment).toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            <div className="flex items-center gap-4">
-                                                {nextContract ? (
-                                                    <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Já Renovado</span>
-                                                ) : (
-                                                    <>
-                                                        <div className="flex flex-col items-end">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Reajuste (R$)</span>
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                className="w-24 text-right text-sm p-1.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-orange/20 outline-none font-bold"
-                                                                value={readjustment || 0}
-                                                                onChange={(e) => {
-                                                                    const val = parseFloat(e.target.value) || 0;
-                                                                    setRenewalReadjustments(prev => ({ ...prev, [client.id]: val }));
-                                                                }}
-                                                            />
-                                                        </div>
-                                                        <div className="flex flex-col items-end min-w-[120px]">
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase">Novos Valores</span>
-                                                            <div className="flex flex-col items-end">
-                                                                <span className="text-[11px] font-black text-slate-900 italic">
-                                                                    Mensal: R$ {((currentContract.monthly_fee || 0) + readjustment).toFixed(2)}
-                                                                </span>
-                                                                <span className="text-[11px] font-black text-primary italic">
-                                                                    Nota: R$ {((currentContract.invoice_value || 0) + readjustment).toFixed(2)}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
 
@@ -740,8 +741,8 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
                             </button>
                             <button
                                 onClick={handleBulkRenewal}
-                                disabled={isRenewing}
-                                className={`flex-1 py-3 rounded-xl text-white font-bold text-sm shadow-lg transition-all active:scale-[0.98] ${isRenewing ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-orange hover:bg-orange-600 shadow-orange-500/20'
+                                disabled={isRenewing || renewalCandidates.length === 0}
+                                className={`flex-1 py-3 rounded-xl text-white font-bold text-sm shadow-lg transition-all active:scale-[0.98] ${isRenewing || renewalCandidates.length === 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-orange hover:bg-orange-600 shadow-orange-500/20'
                                     }`}
                             >
                                 {isRenewing ? 'Processando...' : 'Confirmar Renovação'}
