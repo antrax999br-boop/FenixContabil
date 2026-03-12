@@ -317,7 +317,7 @@ const ContractRenewalPage: React.FC<ContractRenewalPageProps> = ({ state, onSave
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(11);
             doc.setTextColor(153, 27, 27);
-            doc.text(`PENDENTE PARA ${nextYear}: ${month.toUpperCase()}`, 18, currentY + 2);
+            doc.text(`PENDENTE PARA: ${month.toUpperCase()}`, 18, currentY + 2);
             currentY += 8;
 
             const tableData = groupedClients[month].map(item => [
