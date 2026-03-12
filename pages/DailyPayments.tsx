@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DailyPayment } from '../types';
-import { formatCurrency } from '../utils/calculations';
+import { formatCurrency, getLocalDateString } from '../utils/calculations';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -39,9 +39,9 @@ const categoryLabels: Record<string, string> = {
 const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, onAdd, onUpdate, onDelete }) => {
     const [showModal, setShowModal] = useState(false);
     const [editingPayment, setEditingPayment] = useState<DailyPayment | null>(null);
-    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().slice(0, 7)); // YYYY-MM
     const [newPayment, setNewPayment] = useState<Omit<DailyPayment, 'id' | 'created_at'>>({
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalDateString(),
         description: '',
         ativos: '', ativos_pix: '', inativos: '', inativos_pix: '', irpf: '',
         alteracao: '', distrato: '',
@@ -77,7 +77,7 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
         setShowModal(false);
         setEditingPayment(null);
         setNewPayment({
-            date: new Date().toISOString().split('T')[0],
+            date: getLocalDateString(),
             description: '',
             ativos: '', ativos_pix: '', inativos: '', inativos_pix: '', irpf: '',
             alteracao: '', distrato: '',

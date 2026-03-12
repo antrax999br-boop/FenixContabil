@@ -37,11 +37,15 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
   // Calculate delay days
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dueDate = new Date(invoice.due_date);
+
+  // Parse YYYY-MM-DD manually to ensure it's treated as local midnight 
+  // and avoid timezone offsets from new Date(string)
+  const [year, month, day] = invoice.due_date.split('-').map(Number);
+  const dueDate = new Date(year, month - 1, day);
   dueDate.setHours(0, 0, 0, 0);
 
   const businessDaysLate = countBusinessDays(dueDate, today);
-  const calendarDaysLate = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+  const calendarDaysLate = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
   // Minimum 1 week fee as soon as charges apply, then +5 every 7 days
   const weeksLate = Math.max(1, Math.floor(calendarDaysLate / 7));
@@ -110,4 +114,9 @@ export const formatCurrency = (value: number): string => {
 
 export const formatCNPJ = (cnpj: string): string => {
   return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+};
+
+export const getLocalDateString = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };

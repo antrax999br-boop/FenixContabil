@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CreditCardExpense, CreditCardPayment } from '../types';
-import { formatCurrency } from '../utils/calculations';
+import { formatCurrency, getLocalDateString } from '../utils/calculations';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -21,12 +21,12 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
     onDeleteExpense,
     onTogglePayment
 }) => {
-    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7).replace('-', '.')); // AAAA.MM
+    const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().slice(0, 7).replace('-', '.')); // AAAA.MM
     const [showModal, setShowModal] = useState(false);
     const [editingExpense, setEditingExpense] = useState<CreditCardExpense | null>(null);
 
     const [formData, setFormData] = useState<Omit<CreditCardExpense, 'id' | 'created_at'>>({
-        purchase_date: new Date().toISOString().split('T')[0],
+        purchase_date: getLocalDateString(),
         description: '',
         card: 'Visa',
         total_value: 0,
@@ -104,7 +104,7 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
         setShowModal(false);
         setEditingExpense(null);
         setFormData({
-            purchase_date: new Date().toISOString().split('T')[0],
+            purchase_date: getLocalDateString(),
             description: '',
             card: 'Visa',
             total_value: 0,

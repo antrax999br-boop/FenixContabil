@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { AppState, Invoice, InvoiceStatus } from '../types';
-import { formatCurrency } from '../utils/calculations';
+import { formatCurrency, getLocalDateString } from '../utils/calculations';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -29,7 +29,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     client_id: '',
     individual_name: '',
     original_value: '',
-    due_date: new Date().toISOString().split('T')[0],
+    due_date: getLocalDateString(),
     status: InvoiceStatus.NOT_PAID,
     is_retirado: false
   });
@@ -134,7 +134,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
         status: newInvoice.status,
         individual_name: newInvoice.individual_name,
         is_retirado: newInvoice.is_retirado,
-        payment_date: newInvoice.status === InvoiceStatus.PAID ? (editingInvoice.payment_date || new Date().toISOString()) : null
+        payment_date: newInvoice.status === InvoiceStatus.PAID ? (editingInvoice.payment_date || getLocalDateString()) : null
       });
     } else {
       onAdd({
@@ -149,7 +149,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       client_id: '',
       individual_name: '',
       original_value: '',
-      due_date: new Date().toISOString().split('T')[0],
+      due_date: getLocalDateString(),
       status: InvoiceStatus.NOT_PAID,
       is_retirado: false
     });

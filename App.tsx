@@ -22,7 +22,7 @@ import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
 import NotificationsDropdown from './components/NotificationsDropdown';
 import ProfileModal from './components/ProfileModal';
-import { calculateInvoiceStatusAndValues } from './utils/calculations';
+import { calculateInvoiceStatusAndValues, getLocalDateString } from './utils/calculations';
 import { supabase } from './utils/supabase';
 import { playRobustAlarm, stopRobustAlarm } from './utils/alarm';
 
@@ -134,7 +134,7 @@ const App: React.FC = () => {
         }));
 
         // Auto-update status for payables
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString();
         payables = payables.map(p => {
           if (p.status !== InvoiceStatus.PAID && p.due_date < today) {
             return { ...p, status: InvoiceStatus.OVERDUE };
@@ -561,7 +561,7 @@ const App: React.FC = () => {
   };
 
   const togglePayablePaid = async (id: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
 
     // Find the current payable in state
     const payable = state.payables.find(p => p.id === id);
@@ -611,7 +611,7 @@ const App: React.FC = () => {
     const { id, created_at, ...updateData } = payable;
 
     // Auto-status update logic
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     if (updateData.status !== InvoiceStatus.PAID) {
       updateData.status = updateData.due_date < today ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID;
     }

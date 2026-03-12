@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { AppState, Payable, InvoiceStatus } from '../types';
-import { formatCurrency } from '../utils/calculations';
+import { formatCurrency, getLocalDateString } from '../utils/calculations';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -31,7 +31,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
     const [newPayable, setNewPayable] = useState({
         description: '',
         value: 0,
-        due_date: new Date().toISOString().split('T')[0],
+        due_date: getLocalDateString(),
         prazo: '',
         status: InvoiceStatus.NOT_PAID
     });
@@ -54,7 +54,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         setNewPayable({
             description: '',
             value: 0,
-            due_date: new Date().toISOString().split('T')[0],
+            due_date: getLocalDateString(),
             prazo: '',
             status: InvoiceStatus.NOT_PAID
         });
