@@ -29,20 +29,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
     return !isInternet;
   });
 
-  const paidTotal = selectedMonthInvoices
-    .filter(i => i.status === InvoiceStatus.PAID)
-    .reduce((acc, i) => acc + i.final_value, 0);
-
-  const pendingCount = selectedMonthInvoices.filter(i => i.status === InvoiceStatus.NOT_PAID).length;
-  const pendingTotal = selectedMonthInvoices
-    .filter(i => i.status === InvoiceStatus.NOT_PAID)
-    .reduce((acc, i) => acc + i.final_value, 0);
-
-  const overdueCount = selectedMonthInvoices.filter(i => i.status === InvoiceStatus.OVERDUE).length;
-  const overdueTotal = selectedMonthInvoices
-    .filter(i => i.status === InvoiceStatus.OVERDUE)
-    .reduce((acc, i) => acc + i.final_value, 0);
-
   // Categorization for the specific cards
   const getCategorized = (invs: typeof state.invoices) => {
     return invs.map(i => {
@@ -56,17 +42,29 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
 
   const categorizedInvoices = getCategorized(selectedMonthInvoices);
 
-  // Boletos Ativos (Standard) - Only Pendente + Atraso
-  const activeCount = categorizedInvoices.filter(i => i.isStandard && (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE)).length;
-  const activeTotal = categorizedInvoices
-    .filter(i => i.isStandard && (i.status === InvoiceStatus.NOT_PAID || i.status === InvoiceStatus.OVERDUE))
-    .reduce((acc, i) => acc + i.final_value, 0);
+  // PAID Breakdown
+  const paidStandardTotal = categorizedInvoices.filter(i => i.isStandard && i.status === InvoiceStatus.PAID).reduce((acc, i) => acc + i.final_value, 0);
+  const paidSemNotaTotal = categorizedInvoices.filter(i => i.isSemNota && i.status === InvoiceStatus.PAID).reduce((acc, i) => acc + i.final_value, 0);
 
-  // Boletos Sem Nota
-  const noInvoiceCount = categorizedInvoices.filter(i => i.isSemNota).length;
-  const noInvoiceTotal = categorizedInvoices
-    .filter(i => i.isSemNota)
-    .reduce((acc, i) => acc + i.final_value, 0);
+  // PENDING Breakdown
+  const pendingStandardCount = categorizedInvoices.filter(i => i.isStandard && i.status === InvoiceStatus.NOT_PAID).length;
+  const pendingStandardTotal = categorizedInvoices.filter(i => i.isStandard && i.status === InvoiceStatus.NOT_PAID).reduce((acc, i) => acc + i.final_value, 0);
+  const pendingSemNotaCount = categorizedInvoices.filter(i => i.isSemNota && i.status === InvoiceStatus.NOT_PAID).length;
+  const pendingSemNotaTotal = categorizedInvoices.filter(i => i.isSemNota && i.status === InvoiceStatus.NOT_PAID).reduce((acc, i) => acc + i.final_value, 0);
+
+  // OVERDUE Breakdown
+  const overdueStandardCount = categorizedInvoices.filter(i => i.isStandard && i.status === InvoiceStatus.OVERDUE).length;
+  const overdueStandardTotal = categorizedInvoices.filter(i => i.isStandard && i.status === InvoiceStatus.OVERDUE).reduce((acc, i) => acc + i.final_value, 0);
+  const overdueSemNotaCount = categorizedInvoices.filter(i => i.isSemNota && i.status === InvoiceStatus.OVERDUE).length;
+  const overdueSemNotaTotal = categorizedInvoices.filter(i => i.isSemNota && i.status === InvoiceStatus.OVERDUE).reduce((acc, i) => acc + i.final_value, 0);
+
+  // Boletos Ativos (Standard) - Only Pendente + Atraso
+  const activeCount = pendingStandardCount + overdueStandardCount;
+  const activeTotal = pendingStandardTotal + overdueStandardTotal;
+
+  // Boletos Sem Nota (Only Pendente + Atraso to match summary logic)
+  const noInvoiceCount = pendingSemNotaCount + overdueSemNotaCount;
+  const noInvoiceTotal = pendingSemNotaTotal + overdueSemNotaTotal;
 
   const recentInvoices = [...selectedMonthInvoices]
     .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())
@@ -130,8 +128,15 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
             <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded uppercase tracking-wider">Pago</span>
           </div>
           <p className="text-sm font-medium text-slate-500">Boletos Pagos</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(paidTotal)}</h3>
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Ativos</p>
+              <h3 className="text-lg font-bold text-slate-800">{formatCurrency(paidStandardTotal)}</h3>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Sem Nota</p>
+              <h3 className="text-lg font-bold text-slate-800">{formatCurrency(paidSemNotaTotal)}</h3>
+            </div>
           </div>
         </div>
 
@@ -140,13 +145,21 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
             <div className="size-12 rounded-lg bg-status-pending/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-status-pending">schedule</span>
             </div>
-            <span className="text-[11px] font-bold text-status-pending bg-status-pending/10 px-2 py-1 rounded uppercase tracking-wider">
-              {pendingCount} Pendentes
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[9px] font-bold text-status-pending bg-status-pending/10 px-2 py-0.5 rounded uppercase">{pendingStandardCount} Ativos</span>
+              <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded uppercase">{pendingSemNotaCount} Sem Nota</span>
+            </div>
           </div>
           <p className="text-sm font-medium text-slate-500">Boletos Pendentes</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(pendingTotal)}</h3>
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Ativos</p>
+              <h3 className="text-lg font-bold text-slate-800">{formatCurrency(pendingStandardTotal)}</h3>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Sem Nota</p>
+              <h3 className="text-lg font-bold text-slate-800">{formatCurrency(pendingSemNotaTotal)}</h3>
+            </div>
           </div>
         </div>
 
@@ -155,13 +168,21 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
             <div className="size-12 rounded-lg bg-red-50 flex items-center justify-center">
               <span className="material-symbols-outlined text-red-600">error_outline</span>
             </div>
-            <span className="text-[11px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded uppercase tracking-wider">
-              {overdueCount} Atrasadas
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[9px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded uppercase">{overdueStandardCount} Ativos</span>
+              <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded uppercase">{overdueSemNotaCount} Sem Nota</span>
+            </div>
           </div>
           <p className="text-sm font-medium text-slate-500">Valor em Aberto (Atraso)</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(overdueTotal)}</h3>
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Ativos</p>
+              <h3 className="text-lg font-bold text-slate-800">{formatCurrency(overdueStandardTotal)}</h3>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Sem Nota</p>
+              <h3 className="text-lg font-bold text-slate-800">{formatCurrency(overdueSemNotaTotal)}</h3>
+            </div>
           </div>
         </div>
       </section>
@@ -293,7 +314,16 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
                         <span className="text-sm font-semibold text-slate-800">{client?.name || 'Cliente Desconhecido'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-500">#{inv.invoice_number}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-500">
+                      <div className="flex flex-col">
+                        <span>#{inv.invoice_number}</span>
+                        {(inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') ? (
+                          <span className="text-[9px] font-bold text-amber-600 uppercase">Sem Nota</span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-primary uppercase">Ativo</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-800">{formatCurrency(inv.final_value)}</td>
                     <td className="px-6 py-4 text-sm text-slate-500">{inv.due_date}</td>
                     <td className="px-6 py-4">
