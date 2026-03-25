@@ -25,6 +25,7 @@ export interface Client {
   cnpj: string;
   interest_percent: number;
   fine_percent: number;
+  deposit_fenix_savings?: boolean;
   observations: string;
   created_at?: string;
 }

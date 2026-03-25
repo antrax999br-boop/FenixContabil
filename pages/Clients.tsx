@@ -18,6 +18,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
     cnpj: '',
     interest_percent: 1.0,
     fine_percent: 2.0,
+    deposit_fenix_savings: false,
     observations: ''
   });
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,7 +42,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
       onAdd(formData);
     }
 
-    setFormData({ name: '', cnpj: '', interest_percent: 1.0, fine_percent: 2.0, observations: '' });
+    setFormData({ name: '', cnpj: '', interest_percent: 1.0, fine_percent: 2.0, deposit_fenix_savings: false, observations: '' });
     setEditingId(null);
     setShowModal(false);
   };
@@ -53,6 +54,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
       cnpj: client.cnpj,
       interest_percent: client.interest_percent,
       fine_percent: client.fine_percent || 0,
+      deposit_fenix_savings: client.deposit_fenix_savings || false,
       observations: client.observations || ''
     });
     setShowModal(true);
@@ -60,7 +62,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
 
   const handleNewClick = () => {
     setEditingId(null);
-    setFormData({ name: '', cnpj: '', interest_percent: 1.0, fine_percent: 2.0, observations: '' });
+    setFormData({ name: '', cnpj: '', interest_percent: 1.0, fine_percent: 2.0, deposit_fenix_savings: false, observations: '' });
     setShowModal(true);
   };
 
@@ -105,6 +107,7 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">CNPJ</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Juros (%)</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Multa (%)</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Poupança FENIX</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
@@ -125,6 +128,19 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                   <td className="px-6 py-4 text-sm text-slate-600">{formatCNPJ(client.cnpj)}</td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">{client.interest_percent.toFixed(2)}%</td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">{client.fine_percent?.toFixed(2) || '0.00'}%</td>
+                  <td className="px-6 py-4">
+                    {client.deposit_fenix_savings ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 uppercase">
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        Depositado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-500 text-xs font-bold border border-slate-200 uppercase">
+                        <span className="material-symbols-outlined text-[14px]">cancel</span>
+                        Não
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -212,6 +228,20 @@ const ClientsPage: React.FC<ClientsPageProps> = ({ clients, onAdd, onUpdate, onD
                   onChange={e => setFormData({ ...formData, observations: e.target.value })}
                   placeholder="Notas internas..."
                 />
+              </div>
+              <div className="pt-2">
+                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+                    checked={formData.deposit_fenix_savings}
+                    onChange={e => setFormData({ ...formData, deposit_fenix_savings: e.target.checked })}
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-800">Depositar Poupança FENIX</span>
+                    <span className="text-xs text-slate-500 font-medium">Marque se o cliente deve ter seus valores depositados na poupança</span>
+                  </div>
+                </label>
               </div>
               <div className="pt-4 flex gap-3">
                 <button
