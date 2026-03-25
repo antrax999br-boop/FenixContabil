@@ -56,7 +56,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
     const currentMonthFutureEntries = state.futureEntries.filter(e => selectedMonth === 'all' || e.date.startsWith(selectedMonth));
     const currentMonthFenixLoans = state.fenixLoans.filter(e => selectedMonth === 'all' || e.date.startsWith(selectedMonth));
 
-    const receitaBrutaMes = currentMonthDailyPayments.reduce((acc, curr) => acc + extractValue(curr.total), 0);
+    const fenixLoansMes = currentMonthFenixLoans.reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const receitaBrutaMes = currentMonthDailyPayments.reduce((acc, curr) => acc + extractValue(curr.total), 0) - fenixLoansMes;
     // Despesas based on all future entries of the month
     const despesasMes = currentMonthFutureEntries.reduce((acc, curr) => acc + Number(curr.amount), 0);
     const liquidoMes = receitaBrutaMes - despesasMes;
