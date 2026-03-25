@@ -161,6 +161,22 @@ export interface FenixLoan {
   created_at?: string;
 }
 
+export interface BankFee {
+  id: string; // UUID
+  date: string; // YYYY-MM-DD
+  fee_registro_cobranca?: string;
+  fee_titulos_beneficiario?: string;
+  fee_titulo_vencido_baixado?: string;
+  fee_alteracao_vencimento?: string;
+  fee_cesta_max_empresarial?: string;
+  fee_cesta_taxa_protesto?: string;
+  fee_pagamento_taxa_func?: string;
+  fee_extrato_protesto?: string;
+  fee_doc_taxa?: string;
+  total?: string;
+  created_at?: string;
+}
+
 export interface Contract {
   id: string; // UUID
   client_id: string; // UUID
@@ -190,6 +206,7 @@ export interface AppState {
   contracts: Contract[];
   futureEntries: FutureEntry[];
   fenixLoans: FenixLoan[];
+  bankFees: BankFee[];
   currentUser: User | null;
   loading: boolean;
 }

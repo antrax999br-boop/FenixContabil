@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, Payable, CalendarEvent, AppState,
   UserProfile, InvoiceStatus, DailyPayment, CreditCardExpense, CreditCardPayment,
-  Employee, EmployeePayment, EmployeePaymentStatus, Contract, FutureEntry, FenixLoan
+  Employee, EmployeePayment, EmployeePaymentStatus, Contract, FutureEntry, FenixLoan, BankFee
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -43,6 +43,7 @@ const App: React.FC = () => {
     contracts: [],
     futureEntries: [],
     fenixLoans: [],
+    bankFees: [],
     loading: true
   });
 
@@ -94,7 +95,7 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes] = await Promise.all([
         supabase.from('clients').select('*').order('name', { ascending: true }),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
@@ -106,7 +107,8 @@ const App: React.FC = () => {
         supabase.from('employee_payments').select('*'),
         supabase.from('contracts').select('*'),
         supabase.from('future_entries').select('*').order('date', { ascending: false }),
-        supabase.from('fenix_loans').select('*').order('date', { ascending: false })
+        supabase.from('fenix_loans').select('*').order('date', { ascending: false }),
+        supabase.from('bank_fees').select('*').order('date', { ascending: false })
       ]);
 
       if (profile) {
@@ -165,6 +167,7 @@ const App: React.FC = () => {
           contracts: (contractsRes?.data || []) as Contract[],
           futureEntries: (futureEntriesRes?.data || []) as FutureEntry[],
           fenixLoans: (fenixLoansRes?.data || []) as FenixLoan[],
+          bankFees: (bankFeesRes?.data || []) as BankFee[],
           loading: false
         }));
       }
@@ -827,6 +830,22 @@ const App: React.FC = () => {
     if (!error) setState(prev => ({ ...prev, fenixLoans: prev.fenixLoans.filter(e => e.id !== id) }));
   };
 
+  const addBankFee = async (fee: Omit<BankFee, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('bank_fees').insert([fee]).select().single();
+    if (data && !error) setState(prev => ({ ...prev, bankFees: [data, ...prev.bankFees] }));
+    else alert('Erro: ' + error?.message);
+  };
+  const updateBankFee = async (fee: BankFee) => {
+    const { id, created_at, ...updateData } = fee;
+    const { data, error } = await supabase.from('bank_fees').update(updateData).eq('id', id).select().single();
+    if (data && !error) setState(prev => ({ ...prev, bankFees: prev.bankFees.map(f => f.id === id ? data : f) }));
+    else alert('Erro: ' + error?.message);
+  };
+  const deleteBankFee = async (id: string) => {
+    const { error } = await supabase.from('bank_fees').delete().eq('id', id);
+    if (!error) setState(prev => ({ ...prev, bankFees: prev.bankFees.filter(e => e.id !== id) }));
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -874,6 +893,9 @@ const App: React.FC = () => {
           onDeleteFutureEntry={deleteFutureEntry}
           onAddFenixLoan={addFenixLoan}
           onDeleteFenixLoan={deleteFenixLoan}
+          onAddBankFee={addBankFee}
+          onUpdateBankFee={updateBankFee}
+          onDeleteBankFee={deleteBankFee}
         />;
       case 'renovacao-contrato':
         return <ContractRenewalPage

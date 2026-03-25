@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { AppState, FutureEntry, FenixLoan, DailyPayment } from '../types';
+import { AppState, FutureEntry, FenixLoan, DailyPayment, BankFee } from '../types';
 import { formatCurrency, getLocalDateString } from '../utils/calculations';
+import { BankFeesTable } from '../components/BankFeesTable';
 
 interface FinanceiroPageProps {
     state: AppState;
@@ -9,6 +10,9 @@ interface FinanceiroPageProps {
     onDeleteFutureEntry: (id: string) => void;
     onAddFenixLoan: (loan: Omit<FenixLoan, 'id' | 'created_at'>) => void;
     onDeleteFenixLoan: (id: string) => void;
+    onAddBankFee: (fee: Omit<BankFee, 'id' | 'created_at'>) => void;
+    onUpdateBankFee: (fee: BankFee) => void;
+    onDeleteBankFee: (id: string) => void;
 }
 
 const extractValue = (val: string | number | undefined): number => {
@@ -24,7 +28,7 @@ const extractValue = (val: string | number | undefined): number => {
 };
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
-    state, onAddFutureEntry, onToggleFutureEntryApproval, onDeleteFutureEntry, onAddFenixLoan, onDeleteFenixLoan
+    state, onAddFutureEntry, onToggleFutureEntryApproval, onDeleteFutureEntry, onAddFenixLoan, onDeleteFenixLoan, onAddBankFee, onUpdateBankFee, onDeleteBankFee
 }) => {
     const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().slice(0, 7)); // YYYY-MM
 
@@ -235,6 +239,25 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
                     </div>
                 </div>
 
+            </div>
+
+            {/* TARIFAS BANCÁRIAS */}
+            <div className="space-y-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center gap-4">
+                    <div className="size-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <span className="material-symbols-outlined text-[20px]">account_balance</span>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight">Tarifas Bancárias</h3>
+                        <p className="text-xs font-semibold text-slate-500">Controle diário de taxas e impostos</p>
+                    </div>
+                </div>
+                <BankFeesTable
+                    bankFees={state.bankFees}
+                    onAddBankFee={onAddBankFee}
+                    onUpdateBankFee={onUpdateBankFee}
+                    onDeleteBankFee={onDeleteBankFee}
+                />
             </div>
 
             {/* MODALS */}
