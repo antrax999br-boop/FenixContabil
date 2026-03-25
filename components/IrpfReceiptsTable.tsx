@@ -24,11 +24,13 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
     const [dateInput, setDateInput] = useState(getLocalDateString());
     const [nameInput, setNameInput] = useState('');
     const [valueInput, setValueInput] = useState('');
+    const [depositInput, setDepositInput] = useState(false);
 
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
     const [editingValue, setEditingValue] = useState('');
     const [editingDate, setEditingDate] = useState('');
+    const [editingDeposit, setEditingDeposit] = useState(false);
 
     const filteredReceipts = receipts
         .filter(r => r.date.startsWith(yearFilter))
@@ -51,10 +53,12 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
             date: dateInput,
             person_name: nameInput.trim(),
             value: numericValue,
+            deposit_fenix_savings: depositInput,
         });
 
         setNameInput('');
         setValueInput('');
+        setDepositInput(false);
     };
 
     const handleEditClick = (receipt: IrpfReceipt) => {
@@ -62,6 +66,7 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
         setEditingName(receipt.person_name);
         setEditingValue(receipt.value.toString());
         setEditingDate(receipt.date);
+        setEditingDeposit(receipt.deposit_fenix_savings);
     };
 
     const handleSaveEdit = (receipt: IrpfReceipt) => {
@@ -76,7 +81,8 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
             ...receipt,
             date: editingDate,
             person_name: editingName.trim(),
-            value: numericValue
+            value: numericValue,
+            deposit_fenix_savings: editingDeposit
         });
 
         setEditingRowId(null);
@@ -184,6 +190,10 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
                         <input type="text" placeholder="0,00" value={valueInput} onChange={e => setValueInput(e.target.value)} onBlur={() => setValueInput(formatInputValue(valueInput))} className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 text-emerald-700" />
                     </div>
                 </div>
+                <div className="flex items-center gap-2 mb-2 mr-4">
+                    <input type="checkbox" id="depositInput" checked={depositInput} onChange={e => setDepositInput(e.target.checked)} className="size-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
+                    <label htmlFor="depositInput" className="text-xs font-bold text-slate-600 uppercase cursor-pointer">Depositar Poupança FENIX</label>
+                </div>
                 <button onClick={handleAdd} className="flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-bold uppercase transition-colors shadow-sm">
                     <span className="material-symbols-outlined text-[18px]">add</span> Adicionar
                 </button>
@@ -197,6 +207,7 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-center w-32 border-r border-slate-200">Data</th>
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight w-auto max-w-[500px]">Nome da Pessoa</th>
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-right w-48 border-l border-slate-200">Valor (R$)</th>
+                                <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-center w-32 border-l border-slate-200">Poupança FENIX</th>
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-center w-24 border-l border-slate-200">Ações</th>
                             </tr>
                         </thead>
@@ -235,6 +246,19 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
                                         </td>
                                         <td className="px-4 py-3 border-l border-slate-100 text-center">
                                             {isEditing ? (
+                                                <input type="checkbox" checked={editingDeposit} onChange={e => setEditingDeposit(e.target.checked)} className="size-4 rounded border-slate-300 text-emerald-600 cursor-pointer" />
+                                            ) : receipt.deposit_fenix_savings ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase">
+                                                    <span className="material-symbols-outlined text-[12px]">check_circle</span> Depositado
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-bold uppercase">
+                                                    <span className="material-symbols-outlined text-[12px]">cancel</span> Não
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 border-l border-slate-100 text-center">
+                                            {isEditing ? (
                                                 <div className="flex justify-center gap-1">
                                                     <button onClick={() => handleSaveEdit(receipt)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><span className="material-symbols-outlined text-sm">check</span></button>
                                                     <button onClick={() => setEditingRowId(null)} className="p-1 text-slate-400 hover:bg-slate-50 rounded"><span className="material-symbols-outlined text-sm">close</span></button>
@@ -257,7 +281,7 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
                                     <td className="px-4 py-3 text-right text-sm font-black text-emerald-700 border-l border-emerald-200 bg-emerald-100/50">
                                         {formatCurrency(totalAno)}
                                     </td>
-                                    <td className="px-4 py-3"></td>
+                                    <td colSpan={2}></td>
                                 </tr>
                             </tfoot>
                         )}

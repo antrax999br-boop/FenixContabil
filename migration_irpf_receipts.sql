@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS public.irpf_receipts (
     date DATE NOT NULL,
     person_name TEXT NOT NULL,
     value NUMERIC NOT NULL DEFAULT 0,
+    deposit_fenix_savings BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

@@ -25,7 +25,6 @@ export interface Client {
   cnpj: string;
   interest_percent: number;
   fine_percent: number;
-  deposit_fenix_savings?: boolean;
   observations: string;
   created_at?: string;
 }
@@ -198,6 +197,7 @@ export interface IrpfReceipt {
   date: string; // YYYY-MM-DD
   person_name: string;
   value: number;
+  deposit_fenix_savings: boolean;
   created_at?: string;
 }
 
