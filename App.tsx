@@ -842,6 +842,7 @@ const App: React.FC = () => {
     else alert('Erro: ' + error?.message);
   };
   const deleteBankFee = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir a tarifa deste dia e limpar todos os seus valores?')) return;
     const { error } = await supabase.from('bank_fees').delete().eq('id', id);
     if (!error) setState(prev => ({ ...prev, bankFees: prev.bankFees.filter(e => e.id !== id) }));
   };

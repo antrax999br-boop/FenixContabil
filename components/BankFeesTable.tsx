@@ -263,7 +263,7 @@ export const BankFeesTable: React.FC<BankFeesTableProps> = ({ bankFees, onAddBan
                                         </div>
                                     </td>
                                     <td className="px-2 py-2 border-b border-slate-200 text-center">
-                                        <button onClick={() => onDeleteBankFee(fee.id)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+                                        <button onClick={() => onDeleteBankFee(fee.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all p-1.5 flex items-center justify-center" title="Excluir tarifa deste dia">
                                             <span className="material-symbols-outlined text-[18px]">delete</span>
                                         </button>
                                     </td>
