@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { AppState, FutureEntry, FenixLoan, DailyPayment, BankFee, IrpfReceipt } from '../types';
+import { AppState, FutureEntry, FenixLoan, DailyPayment, BankFee, IrpfReceipt, FenixDebt } from '../types';
 import { formatCurrency, getLocalDateString } from '../utils/calculations';
 import { BankFeesTable } from '../components/BankFeesTable';
 import { IrpfReceiptsTable } from '../components/IrpfReceiptsTable';
+import { FenixDebtTable } from '../components/FenixDebtTable';
 
 interface FinanceiroPageProps {
     state: AppState;
@@ -17,6 +18,9 @@ interface FinanceiroPageProps {
     onAddIrpfReceipt: (receipt: Omit<IrpfReceipt, 'id' | 'created_at'>) => void;
     onUpdateIrpfReceipt: (receipt: IrpfReceipt) => void;
     onDeleteIrpfReceipt: (id: string) => void;
+    onAddFenixDebt: (debt: Omit<FenixDebt, 'id' | 'created_at'>) => void;
+    onUpdateFenixDebt: (debt: FenixDebt) => void;
+    onDeleteFenixDebt: (id: string) => void;
 }
 
 const extractValue = (val: string | number | undefined): number => {
@@ -32,7 +36,7 @@ const extractValue = (val: string | number | undefined): number => {
 };
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
-    state, onAddFutureEntry, onToggleFutureEntryApproval, onDeleteFutureEntry, onAddFenixLoan, onDeleteFenixLoan, onAddBankFee, onUpdateBankFee, onDeleteBankFee, onAddIrpfReceipt, onUpdateIrpfReceipt, onDeleteIrpfReceipt
+    state, onAddFutureEntry, onToggleFutureEntryApproval, onDeleteFutureEntry, onAddFenixLoan, onDeleteFenixLoan, onAddBankFee, onUpdateBankFee, onDeleteBankFee, onAddIrpfReceipt, onUpdateIrpfReceipt, onDeleteIrpfReceipt, onAddFenixDebt, onUpdateFenixDebt, onDeleteFenixDebt
 }) => {
     const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().slice(0, 7)); // YYYY-MM
 
@@ -158,6 +162,15 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
                         {formatCurrency(liquidoMes)}
                     </span>
                 </div>
+            </div>
+
+            {/* DEVE PARA FENIX */}
+            <div className="mb-8">
+                <FenixDebtTable
+                    debts={state.fenixDebts}
+                    onAddDebt={onAddFenixDebt}
+                    onDeleteDebt={onDeleteFenixDebt}
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

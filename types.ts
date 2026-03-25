@@ -201,6 +201,20 @@ export interface IrpfReceipt {
   created_at?: string;
 }
 
+export enum FenixDebtType {
+  WITHDRAWAL = 'WITHDRAWAL', // Aumenta a dívida
+  PAYMENT = 'PAYMENT' // Diminui a dívida
+}
+
+export interface FenixDebt {
+  id: string; // UUID
+  date: string; // YYYY-MM-DD
+  description: string;
+  type: FenixDebtType;
+  amount: number;
+  created_at?: string;
+}
+
 export interface AppState {
   users: User[];
   clients: Client[];
@@ -217,6 +231,7 @@ export interface AppState {
   fenixLoans: FenixLoan[];
   bankFees: BankFee[];
   irpfReceipts: IrpfReceipt[];
+  fenixDebts: FenixDebt[];
   currentUser: User | null;
   loading: boolean;
 }
