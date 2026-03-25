@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BankFee } from '../types';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface BankFeesTableProps {
     bankFees: BankFee[];
@@ -113,25 +115,56 @@ export const BankFeesTable: React.FC<BankFeesTableProps> = ({ bankFees, onAddBan
         }
     };
 
-    const exportToCSV = () => {
+    const sumCols = {
+        registro_cobranca: 0,
+        titulos_beneficiario: 0,
+        titulo_vencido_baixado: 0,
+        alteracao_vencimento: 0,
+        cesta_max_empresarial: 0,
+        cesta_taxa_protesto: 0,
+        pagamento_taxa_func: 0,
+        extrato_protesto: 0,
+        doc_taxa: 0,
+        total: 0
+    };
+
+    filteredFees.forEach(f => {
+        sumCols.registro_cobranca += extractValue(f.fee_registro_cobranca);
+        sumCols.titulos_beneficiario += extractValue(f.fee_titulos_beneficiario);
+        sumCols.titulo_vencido_baixado += extractValue(f.fee_titulo_vencido_baixado);
+        sumCols.alteracao_vencimento += extractValue(f.fee_alteracao_vencimento);
+        sumCols.cesta_max_empresarial += extractValue(f.fee_cesta_max_empresarial);
+        sumCols.cesta_taxa_protesto += extractValue(f.fee_cesta_taxa_protesto);
+        sumCols.pagamento_taxa_func += extractValue(f.fee_pagamento_taxa_func);
+        sumCols.extrato_protesto += extractValue(f.fee_extrato_protesto);
+        sumCols.doc_taxa += extractValue(f.fee_doc_taxa);
+        sumCols.total += extractValue(f.total);
+    });
+
+    const exportToPDF = () => {
         if (filteredFees.length === 0) return;
+
+        const doc = new jsPDF('landscape');
+
+        doc.setFontSize(16);
+        doc.text(`Relatório de Tarifas Bancárias - ${startDate} a ${endDate}`, 14, 20);
 
         const headers = [
             'DATA',
-            'TARIFA REGISTRO COBRANÇA',
-            'TARIFA BANCÁRIA TÍTULOS PELO BENEFICIÁRIO',
-            'TARIFA TÍTULO VENCIDO / BAIXADO',
-            'TARIFA ALTERAÇÃO DE VENCIMENTO',
-            'TARIFA CESTA + MAX EMPRESARIAL',
-            'TARIFA CESTA + TAXA DE PROTESTO',
-            'PAGAMENTOS TAXA FUNC',
-            'TARIFA EXTRATO DE PROTESTO',
+            'REG. COBRANÇA',
+            'TÍT. BENEFIC.',
+            'VENC. BAIXADO',
+            'ALT. VENC.',
+            'CESTA MAX',
+            'TX. PROTESTO',
+            'TX. FUNC',
+            'EXTRATO PROT.',
             'DOC TAXA',
             'TOTAL'
         ];
 
         const rows = filteredFees.map(f => [
-            f.date,
+            new Date(f.date + 'T12:00:00').toLocaleDateString('pt-BR').substring(0, 5),
             f.fee_registro_cobranca || '0,00',
             f.fee_titulos_beneficiario || '0,00',
             f.fee_titulo_vencido_baixado || '0,00',
@@ -144,16 +177,37 @@ export const BankFeesTable: React.FC<BankFeesTableProps> = ({ bankFees, onAddBan
             f.total || '0,00'
         ]);
 
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
+        rows.push([
+            'TOTAL',
+            formatValue(sumCols.registro_cobranca),
+            formatValue(sumCols.titulos_beneficiario),
+            formatValue(sumCols.titulo_vencido_baixado),
+            formatValue(sumCols.alteracao_vencimento),
+            formatValue(sumCols.cesta_max_empresarial),
+            formatValue(sumCols.cesta_taxa_protesto),
+            formatValue(sumCols.pagamento_taxa_func),
+            formatValue(sumCols.extrato_protesto),
+            formatValue(sumCols.doc_taxa),
+            formatValue(sumCols.total)
+        ]);
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `tarifas_bancarias_${startDate}_a_${endDate}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        (doc as any).autoTable({
+            startY: 30,
+            head: [headers],
+            body: rows,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
+            styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+            columnStyles: { 0: { halign: 'center', fontStyle: 'bold' } },
+            didParseCell: function (data: any) {
+                if (data.row.index === rows.length - 1) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [220, 230, 255];
+                }
+            }
+        });
+
+        doc.save(`tarifas_bancarias_${startDate}_a_${endDate}.pdf`);
     };
 
     const renderEditableCell = (fee: BankFee, field: keyof BankFee) => {
@@ -205,8 +259,8 @@ export const BankFeesTable: React.FC<BankFeesTableProps> = ({ bankFees, onAddBan
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button onClick={exportToCSV} className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-xs font-bold uppercase transition-colors">
-                        <span className="material-symbols-outlined text-[16px]">download</span> Excel
+                    <button onClick={exportToPDF} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-xs font-bold uppercase transition-colors">
+                        <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span> Imprimir PDF
                     </button>
                     <div className="h-6 w-px bg-slate-200"></div>
                     <div className="flex items-center gap-2">
@@ -270,6 +324,24 @@ export const BankFeesTable: React.FC<BankFeesTableProps> = ({ bankFees, onAddBan
                                 </tr>
                             ))}
                         </tbody>
+                        {filteredFees.length > 0 && (
+                            <tfoot>
+                                <tr className="bg-blue-50 border-t-2 border-blue-200">
+                                    <td className="px-4 py-3 text-sm font-black text-blue-800 text-center sticky left-0 bg-blue-50 border-r border-blue-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] z-10">TOTAL</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.registro_cobranca)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.titulos_beneficiario)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.titulo_vencido_baixado)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.alteracao_vencimento)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.cesta_max_empresarial)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.cesta_taxa_protesto)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.pagamento_taxa_func)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.extrato_protesto)}</td>
+                                    <td className="px-3 py-3 text-right text-xs font-bold text-blue-700 border-r border-blue-100 min-w-[120px]">R$ {formatValue(sumCols.doc_taxa)}</td>
+                                    <td className="px-4 py-3 text-right text-sm font-black text-blue-900 border-l border-blue-200 bg-blue-100/50 w-36">R$ {formatValue(sumCols.total)}</td>
+                                    <td className="px-2 py-3"></td>
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
             </div>
