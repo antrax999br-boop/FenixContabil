@@ -192,6 +192,14 @@ export interface Contract {
 }
 
 
+export interface IrpfReceipt {
+  id: string; // UUID
+  date: string; // YYYY-MM-DD
+  person_name: string;
+  value: number;
+  created_at?: string;
+}
+
 export interface AppState {
   users: User[];
   clients: Client[];
@@ -207,6 +215,7 @@ export interface AppState {
   futureEntries: FutureEntry[];
   fenixLoans: FenixLoan[];
   bankFees: BankFee[];
+  irpfReceipts: IrpfReceipt[];
   currentUser: User | null;
   loading: boolean;
 }

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, Payable, CalendarEvent, AppState,
   UserProfile, InvoiceStatus, DailyPayment, CreditCardExpense, CreditCardPayment,
-  Employee, EmployeePayment, EmployeePaymentStatus, Contract, FutureEntry, FenixLoan, BankFee
+  Employee, EmployeePayment, EmployeePaymentStatus, Contract, FutureEntry, FenixLoan, BankFee, IrpfReceipt
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -44,6 +44,7 @@ const App: React.FC = () => {
     futureEntries: [],
     fenixLoans: [],
     bankFees: [],
+    irpfReceipts: [],
     loading: true
   });
 
@@ -95,7 +96,7 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes] = await Promise.all([
         supabase.from('clients').select('*').order('name', { ascending: true }),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
@@ -108,7 +109,8 @@ const App: React.FC = () => {
         supabase.from('contracts').select('*'),
         supabase.from('future_entries').select('*').order('date', { ascending: false }),
         supabase.from('fenix_loans').select('*').order('date', { ascending: false }),
-        supabase.from('bank_fees').select('*').order('date', { ascending: false })
+        supabase.from('bank_fees').select('*').order('date', { ascending: false }),
+        supabase.from('irpf_receipts').select('*').order('date', { ascending: false })
       ]);
 
       if (profile) {
@@ -168,6 +170,7 @@ const App: React.FC = () => {
           futureEntries: (futureEntriesRes?.data || []) as FutureEntry[],
           fenixLoans: (fenixLoansRes?.data || []) as FenixLoan[],
           bankFees: (bankFeesRes?.data || []) as BankFee[],
+          irpfReceipts: (irpfReceiptsRes?.data || []) as IrpfReceipt[],
           loading: false
         }));
       }
@@ -847,6 +850,26 @@ const App: React.FC = () => {
     if (!error) setState(prev => ({ ...prev, bankFees: prev.bankFees.filter(e => e.id !== id) }));
   };
 
+  const addIrpfReceipt = async (receipt: Omit<IrpfReceipt, 'id' | 'created_at'>) => {
+    const { data: profile } = await supabase.auth.getSession();
+    if (profile?.session?.user) {
+      const { data, error } = await supabase.from('irpf_receipts').insert([receipt]).select().single();
+      if (!error && data) setState(prev => ({ ...prev, irpfReceipts: [data as IrpfReceipt, ...prev.irpfReceipts] }));
+      else alert('Erro: ' + error?.message);
+    }
+  };
+  const updateIrpfReceipt = async (receipt: IrpfReceipt) => {
+    const { id, created_at, ...updateData } = receipt as any;
+    const { data, error } = await supabase.from('irpf_receipts').update(updateData).eq('id', id).select().single();
+    if (data && !error) setState(prev => ({ ...prev, irpfReceipts: prev.irpfReceipts.map(e => e.id === id ? data : e) }));
+    else alert('Erro: ' + error?.message);
+  };
+  const deleteIrpfReceipt = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este recebimento de IRPF?')) return;
+    const { error } = await supabase.from('irpf_receipts').delete().eq('id', id);
+    if (!error) setState(prev => ({ ...prev, irpfReceipts: prev.irpfReceipts.filter(e => e.id !== id) }));
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -897,6 +920,9 @@ const App: React.FC = () => {
           onAddBankFee={addBankFee}
           onUpdateBankFee={updateBankFee}
           onDeleteBankFee={deleteBankFee}
+          onAddIrpfReceipt={addIrpfReceipt}
+          onUpdateIrpfReceipt={updateIrpfReceipt}
+          onDeleteIrpfReceipt={deleteIrpfReceipt}
         />;
       case 'renovacao-contrato':
         return <ContractRenewalPage

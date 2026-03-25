@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { AppState, FutureEntry, FenixLoan, DailyPayment, BankFee } from '../types';
+import { AppState, FutureEntry, FenixLoan, DailyPayment, BankFee, IrpfReceipt } from '../types';
 import { formatCurrency, getLocalDateString } from '../utils/calculations';
 import { BankFeesTable } from '../components/BankFeesTable';
+import { IrpfReceiptsTable } from '../components/IrpfReceiptsTable';
 
 interface FinanceiroPageProps {
     state: AppState;
@@ -13,6 +14,9 @@ interface FinanceiroPageProps {
     onAddBankFee: (fee: Omit<BankFee, 'id' | 'created_at'>) => void;
     onUpdateBankFee: (fee: BankFee) => void;
     onDeleteBankFee: (id: string) => void;
+    onAddIrpfReceipt: (receipt: Omit<IrpfReceipt, 'id' | 'created_at'>) => void;
+    onUpdateIrpfReceipt: (receipt: IrpfReceipt) => void;
+    onDeleteIrpfReceipt: (id: string) => void;
 }
 
 const extractValue = (val: string | number | undefined): number => {
@@ -28,7 +32,7 @@ const extractValue = (val: string | number | undefined): number => {
 };
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
-    state, onAddFutureEntry, onToggleFutureEntryApproval, onDeleteFutureEntry, onAddFenixLoan, onDeleteFenixLoan, onAddBankFee, onUpdateBankFee, onDeleteBankFee
+    state, onAddFutureEntry, onToggleFutureEntryApproval, onDeleteFutureEntry, onAddFenixLoan, onDeleteFenixLoan, onAddBankFee, onUpdateBankFee, onDeleteBankFee, onAddIrpfReceipt, onUpdateIrpfReceipt, onDeleteIrpfReceipt
 }) => {
     const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().slice(0, 7)); // YYYY-MM
 
@@ -257,6 +261,25 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
                     onAddBankFee={onAddBankFee}
                     onUpdateBankFee={onUpdateBankFee}
                     onDeleteBankFee={onDeleteBankFee}
+                />
+            </div>
+
+            {/* RECEBIMENTOS IRPF */}
+            <div className="space-y-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center gap-4">
+                    <div className="size-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                        <span className="material-symbols-outlined text-[20px]">request_quote</span>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight">Recebimento de Valores Pagos no Ano de IRPF</h3>
+                        <p className="text-xs font-semibold text-slate-500">Controle anual de recebimentos de IRPF</p>
+                    </div>
+                </div>
+                <IrpfReceiptsTable
+                    receipts={state.irpfReceipts}
+                    onAddReceipt={onAddIrpfReceipt}
+                    onUpdateReceipt={onUpdateIrpfReceipt}
+                    onDeleteReceipt={onDeleteIrpfReceipt}
                 />
             </div>
 
