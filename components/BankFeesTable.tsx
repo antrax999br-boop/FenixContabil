@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BankFee } from '../types';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface BankFeesTableProps {
     bankFees: BankFee[];
@@ -191,7 +191,7 @@ export const BankFeesTable: React.FC<BankFeesTableProps> = ({ bankFees, onAddBan
             formatValue(sumCols.total)
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
             startY: 30,
             head: [headers],
             body: rows,
