@@ -4,17 +4,18 @@ import { formatCurrency } from '../utils/calculations';
 
 interface FenixDebtTableProps {
     debts: FenixDebt[];
-    selectedMonth: string;
     onAddDebt: (debt: Omit<FenixDebt, 'id' | 'created_at'>) => void;
     onDeleteDebt: (id: string) => void;
 }
 
-export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, selectedMonth, onAddDebt, onDeleteDebt }) => {
+export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, onAddDebt, onDeleteDebt }) => {
     const getLocalDateString = () => {
         const d = new Date();
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
         return d.toISOString().split('T')[0];
     };
+
+    const [debtMonth, setDebtMonth] = useState(getLocalDateString().slice(0, 7)); // YYYY-MM
 
     const [dateInput, setDateInput] = useState(getLocalDateString());
     const [descInput, setDescInput] = useState('');
@@ -22,10 +23,10 @@ export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, selectedM
     const [typeInput, setTypeInput] = useState<FenixDebtType>(FenixDebtType.WITHDRAWAL);
 
     const filteredDebts = debts
-        .filter(d => d.date.startsWith(selectedMonth))
+        .filter(d => d.date.startsWith(debtMonth))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    const previousDebts = debts.filter(d => d.date < `${selectedMonth}-01`);
+    const previousDebts = debts.filter(d => d.date < `${debtMonth}-01`);
 
     const previousDebtTotal = previousDebts.reduce((acc, current) => {
         if (current.type === FenixDebtType.WITHDRAWAL) return acc + current.amount;
@@ -81,13 +82,24 @@ export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, selectedM
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col h-full space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div>
-                    <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        <span className="material-symbols-outlined text-rose-500">account_balance_wallet</span>
-                        DEVE PARA FENIX
-                    </h3>
-                    <p className="text-xs font-semibold text-slate-500 mt-1">Controle de dívidas e pagamentos corporativos isolados</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                            <span className="material-symbols-outlined text-rose-500">account_balance_wallet</span>
+                            DEVE PARA FENIX
+                        </h3>
+                        <p className="text-xs font-semibold text-slate-500 mt-1">Controle de dívidas separado por mês</p>
+                    </div>
+                    <div className="ml-4 pl-4 border-l border-slate-200">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mês de Análise</label>
+                        <input
+                            type="month"
+                            value={debtMonth}
+                            onChange={e => setDebtMonth(e.target.value)}
+                            className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-rose-200"
+                        />
+                    </div>
                 </div>
                 <div className="bg-rose-50 px-4 py-2 rounded-xl text-right">
                     <span className="block text-[10px] font-black text-rose-400 uppercase tracking-widest">Dívida Total Acumulada</span>
