@@ -143,6 +143,24 @@ export interface EmployeePayment {
   created_at?: string;
 }
 
+export interface FutureEntry {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: 'ESPN' | 'FENIX';
+  approved: boolean;
+  created_at?: string;
+}
+
+export interface FenixLoan {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  created_at?: string;
+}
+
 export interface Contract {
   id: string; // UUID
   client_id: string; // UUID
@@ -170,6 +188,8 @@ export interface AppState {
   employeePayments: EmployeePayment[];
   events: CalendarEvent[];
   contracts: Contract[];
+  futureEntries: FutureEntry[];
+  fenixLoans: FenixLoan[];
   currentUser: User | null;
   loading: boolean;
 }

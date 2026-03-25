@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   User, Client, Invoice, Payable, CalendarEvent, AppState,
   UserProfile, InvoiceStatus, DailyPayment, CreditCardExpense, CreditCardPayment,
-  Employee, EmployeePayment, EmployeePaymentStatus, Contract
+  Employee, EmployeePayment, EmployeePaymentStatus, Contract, FutureEntry, FenixLoan
 } from './types';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -17,6 +17,7 @@ import DailyPaymentsPage from './pages/DailyPayments';
 import CreditCardExpensesPage from './pages/CreditCardExpenses';
 import EmployeesPage from './pages/Employees';
 import ContractRenewalPage from './pages/ContractRenewal';
+import FinanceiroPage from './pages/Financeiro';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ChatWidget from './components/ChatWidget';
@@ -40,6 +41,8 @@ const App: React.FC = () => {
     employeePayments: [],
     events: [],
     contracts: [],
+    futureEntries: [],
+    fenixLoans: [],
     loading: true
   });
 
@@ -71,7 +74,7 @@ const App: React.FC = () => {
           ...prev,
           currentUser: null,
           users: [], clients: [], invoices: [], payables: [], dailyPayments: [], events: [],
-          creditCardExpenses: [], creditCardPayments: [],
+          creditCardExpenses: [], creditCardPayments: [], futureEntries: [], fenixLoans: [],
           loading: false
         }));
       }
@@ -91,7 +94,7 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
-      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes] = await Promise.all([
         supabase.from('clients').select('*').order('name', { ascending: true }),
         supabase.from('invoices').select('*'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
@@ -101,7 +104,9 @@ const App: React.FC = () => {
         supabase.from('credit_card_payments').select('*'),
         supabase.from('employees').select('*').order('name', { ascending: true }),
         supabase.from('employee_payments').select('*'),
-        supabase.from('contracts').select('*')
+        supabase.from('contracts').select('*'),
+        supabase.from('future_entries').select('*').order('date', { ascending: false }),
+        supabase.from('fenix_loans').select('*').order('date', { ascending: false })
       ]);
 
       if (profile) {
@@ -142,8 +147,8 @@ const App: React.FC = () => {
           return p;
         });
 
-        const creditCardExpenses = (creditCardExpensesRes.data || []) as CreditCardExpense[];
-        const creditCardPayments = (creditCardPaymentsRes.data || []) as CreditCardPayment[];
+        const creditCardExpenses = (creditCardExpensesRes?.data || []) as CreditCardExpense[];
+        const creditCardPayments = (creditCardPaymentsRes?.data || []) as CreditCardPayment[];
 
         setState(prev => ({
           ...prev,
@@ -154,10 +159,12 @@ const App: React.FC = () => {
           dailyPayments: (dailyPaymentsRes.data || []) as DailyPayment[],
           creditCardExpenses,
           creditCardPayments,
-          employees: (employeesRes.data || []) as Employee[],
-          employeePayments: (employeePaymentsRes.data || []) as EmployeePayment[],
+          employees: (employeesRes?.data || []) as Employee[],
+          employeePayments: (employeePaymentsRes?.data || []) as EmployeePayment[],
           events: events,
-          contracts: (contractsRes.data || []) as Contract[],
+          contracts: (contractsRes?.data || []) as Contract[],
+          futureEntries: (futureEntriesRes?.data || []) as FutureEntry[],
+          fenixLoans: (fenixLoansRes?.data || []) as FenixLoan[],
           loading: false
         }));
       }
@@ -795,6 +802,31 @@ const App: React.FC = () => {
     }
   };
 
+  const addFutureEntry = async (entry: Omit<FutureEntry, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('future_entries').insert([entry]).select().single();
+    if (data && !error) setState(prev => ({ ...prev, futureEntries: [data, ...prev.futureEntries] }));
+    else alert('Erro: ' + error?.message);
+  };
+  const toggleFutureEntryApproval = async (id: string, approved: boolean) => {
+    const { error } = await supabase.from('future_entries').update({ approved }).eq('id', id);
+    if (!error) setState(prev => ({ ...prev, futureEntries: prev.futureEntries.map(e => e.id === id ? { ...e, approved } : e) }));
+    else alert('Erro: ' + error?.message);
+  };
+  const deleteFutureEntry = async (id: string) => {
+    const { error } = await supabase.from('future_entries').delete().eq('id', id);
+    if (!error) setState(prev => ({ ...prev, futureEntries: prev.futureEntries.filter(e => e.id !== id) }));
+  };
+
+  const addFenixLoan = async (loan: Omit<FenixLoan, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('fenix_loans').insert([loan]).select().single();
+    if (data && !error) setState(prev => ({ ...prev, fenixLoans: [data, ...prev.fenixLoans] }));
+    else alert('Erro: ' + error?.message);
+  };
+  const deleteFenixLoan = async (id: string) => {
+    const { error } = await supabase.from('fenix_loans').delete().eq('id', id);
+    if (!error) setState(prev => ({ ...prev, fenixLoans: prev.fenixLoans.filter(e => e.id !== id) }));
+  };
+
   if (state.loading) {
     return <div className="h-screen flex items-center justify-center bg-background-light text-primary">Carregando Sistema...</div>;
   }
@@ -833,6 +865,15 @@ const App: React.FC = () => {
           onUpdateEmployee={updateEmployee}
           onDeleteEmployee={deleteEmployee}
           onUpdatePayment={updateEmployeePayment}
+        />;
+      case 'financeiro':
+        return <FinanceiroPage
+          state={state}
+          onAddFutureEntry={addFutureEntry}
+          onToggleFutureEntryApproval={toggleFutureEntryApproval}
+          onDeleteFutureEntry={deleteFutureEntry}
+          onAddFenixLoan={addFenixLoan}
+          onDeleteFenixLoan={deleteFenixLoan}
         />;
       case 'renovacao-contrato':
         return <ContractRenewalPage
