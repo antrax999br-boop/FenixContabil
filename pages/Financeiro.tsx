@@ -168,6 +168,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
             <div className="mb-8">
                 <FenixDebtTable
                     debts={state.fenixDebts}
+                    selectedMonth={selectedMonth}
                     onAddDebt={onAddFenixDebt}
                     onDeleteDebt={onDeleteFenixDebt}
                 />

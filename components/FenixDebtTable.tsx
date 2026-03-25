@@ -4,11 +4,12 @@ import { formatCurrency } from '../utils/calculations';
 
 interface FenixDebtTableProps {
     debts: FenixDebt[];
+    selectedMonth: string;
     onAddDebt: (debt: Omit<FenixDebt, 'id' | 'created_at'>) => void;
     onDeleteDebt: (id: string) => void;
 }
 
-export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, onAddDebt, onDeleteDebt }) => {
+export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, selectedMonth, onAddDebt, onDeleteDebt }) => {
     const getLocalDateString = () => {
         const d = new Date();
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -20,11 +21,25 @@ export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, onAddDebt
     const [valueInput, setValueInput] = useState('');
     const [typeInput, setTypeInput] = useState<FenixDebtType>(FenixDebtType.WITHDRAWAL);
 
-    const totalDivida = debts.reduce((acc, current) => {
+    const filteredDebts = debts
+        .filter(d => d.date.startsWith(selectedMonth))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const previousDebts = debts.filter(d => d.date < `${selectedMonth}-01`);
+
+    const previousDebtTotal = previousDebts.reduce((acc, current) => {
         if (current.type === FenixDebtType.WITHDRAWAL) return acc + current.amount;
         if (current.type === FenixDebtType.PAYMENT) return acc - current.amount;
         return acc;
     }, 0);
+
+    const currentMonthDebtTotal = filteredDebts.reduce((acc, current) => {
+        if (current.type === FenixDebtType.WITHDRAWAL) return acc + current.amount;
+        if (current.type === FenixDebtType.PAYMENT) return acc - current.amount;
+        return acc;
+    }, 0);
+
+    const totalDivida = previousDebtTotal + currentMonthDebtTotal;
 
     const formatInputValue = (val: string) => {
         if (!val) return '';
@@ -121,9 +136,18 @@ export const FenixDebtTable: React.FC<FenixDebtTableProps> = ({ debts, onAddDebt
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {debts.length === 0 ? (
-                            <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm font-medium">Nenhum registro encontrado.</td></tr>
-                        ) : debts.map(d => (
+                        <tr className="bg-slate-50/80 border-b border-slate-200">
+                            <td colSpan={3} className="px-4 py-3 text-xs font-black text-slate-500 text-right uppercase tracking-widest">
+                                Dívida vinda do mês anterior:
+                            </td>
+                            <td className={`px-4 py-3 text-right text-sm font-black ${previousDebtTotal >= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                {previousDebtTotal > 0 ? '+' : ''}{formatCurrency(previousDebtTotal)}
+                            </td>
+                            <td></td>
+                        </tr>
+                        {filteredDebts.length === 0 ? (
+                            <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400 text-sm font-medium">Nenhum registro encontrado neste mês.</td></tr>
+                        ) : filteredDebts.map(d => (
                             <tr key={d.id} className="hover:bg-slate-50/50">
                                 <td className="px-4 py-3 text-sm font-semibold text-slate-600">
                                     {new Date(d.date + 'T12:00:00').toLocaleDateString('pt-BR')}
