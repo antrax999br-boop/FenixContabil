@@ -192,7 +192,7 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
                 </div>
                 <div className="flex items-center gap-2 mb-2 mr-4">
                     <input type="checkbox" id="depositInput" checked={depositInput} onChange={e => setDepositInput(e.target.checked)} className="size-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
-                    <label htmlFor="depositInput" className="text-xs font-bold text-slate-600 uppercase cursor-pointer">Depositar Poupança FENIX</label>
+                    <label htmlFor="depositInput" className="text-xs font-bold text-slate-600 uppercase cursor-pointer">Depositar Poupança ENN</label>
                 </div>
                 <button onClick={handleAdd} className="flex items-center gap-1 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-bold uppercase transition-colors shadow-sm">
                     <span className="material-symbols-outlined text-[18px]">add</span> Adicionar
@@ -207,7 +207,7 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-center w-32 border-r border-slate-200">Data</th>
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight w-auto max-w-[500px]">Nome da Pessoa</th>
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-right w-48 border-l border-slate-200">Valor (R$)</th>
-                                <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-center w-32 border-l border-slate-200">Poupança FENIX</th>
+                                <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-center w-32 border-l border-slate-200">Poupança ENN</th>
                                 <th className="px-4 py-3 text-xs font-black text-slate-600 uppercase tracking-tight text-center w-24 border-l border-slate-200">Ações</th>
                             </tr>
                         </thead>
