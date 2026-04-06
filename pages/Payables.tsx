@@ -134,11 +134,18 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                 5: { halign: 'center' }
             },
             didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 5) {
-                    const val = data.cell.text[0];
-                    if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
-                    if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
-                    if (val === 'PENDENTE') data.cell.styles.textColor = [217, 119, 6];
+                if (data.section === 'body') {
+                    if (data.column.index === 3) {
+                        const val = data.cell.text[0].toLowerCase().trim();
+                        if (['pago', 'ok'].includes(val)) data.cell.styles.textColor = [16, 185, 129];
+                        else if (['aguardando', 'atrasado'].includes(val)) data.cell.styles.textColor = [225, 29, 72];
+                    }
+                    if (data.column.index === 5) {
+                        const val = data.cell.text[0];
+                        if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
+                        if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
+                        if (val === 'PENDENTE') data.cell.styles.textColor = [217, 119, 6];
+                    }
                 }
             }
         });
@@ -259,7 +266,16 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                         <td className="px-6 py-4 text-sm text-slate-600">
                                             {new Date(p.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{p.prazo || '---'}</td>
+                                        <td className="px-6 py-4 text-sm">
+                                            <span className={`${['aguardando', 'atrasado'].includes((p.prazo || '').toLowerCase().trim())
+                                                    ? 'text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded'
+                                                    : ['pago', 'ok'].includes((p.prazo || '').toLowerCase().trim())
+                                                        ? 'text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded'
+                                                        : 'text-slate-600'
+                                                }`}>
+                                                {p.prazo || '---'}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4 text-sm text-slate-600">
                                             {p.payment_date
                                                 ? new Date(p.payment_date + 'T12:00:00').toLocaleDateString('pt-BR')
