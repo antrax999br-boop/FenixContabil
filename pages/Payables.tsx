@@ -138,7 +138,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                     if (data.column.index === 3) {
                         const val = data.cell.text[0].toLowerCase().trim();
                         if (['pago', 'ok'].includes(val)) data.cell.styles.textColor = [16, 185, 129];
-                        else if (['aguardando', 'atrasado'].includes(val)) data.cell.styles.textColor = [225, 29, 72];
+                        else if (['aguardando', 'atrasado', 'agendado'].includes(val)) data.cell.styles.textColor = [225, 29, 72];
                     }
                     if (data.column.index === 5) {
                         const val = data.cell.text[0];
@@ -267,11 +267,11 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                             {new Date(p.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                                         </td>
                                         <td className="px-6 py-4 text-sm">
-                                            <span className={`${['aguardando', 'atrasado'].includes((p.prazo || '').toLowerCase().trim())
-                                                    ? 'text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded'
-                                                    : ['pago', 'ok'].includes((p.prazo || '').toLowerCase().trim())
-                                                        ? 'text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded'
-                                                        : 'text-slate-600'
+                                            <span className={`${['aguardando', 'atrasado', 'agendado'].includes((p.prazo || '').toLowerCase().trim())
+                                                ? 'text-rose-600 font-bold bg-rose-50 px-2 py-1 rounded'
+                                                : ['pago', 'ok'].includes((p.prazo || '').toLowerCase().trim())
+                                                    ? 'text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded'
+                                                    : 'text-slate-600'
                                                 }`}>
                                                 {p.prazo || '---'}
                                             </span>
