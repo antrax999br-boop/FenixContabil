@@ -551,7 +551,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                               {(client?.name || inv.individual_name || '??').substring(0, 2)}
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-slate-900">{client?.name || inv.individual_name || 'Diversos'}</p>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {(() => {
+                                  const client = state.clients.find(c => c.id === inv.client_id);
+                                  const contract = state.contracts?.find(c => c.client_id === inv.client_id);
+                                  const name = client?.name || inv.individual_name || 'Diversos';
+                                  return contract?.copan ? `${contract.copan} - ${name}` : name;
+                                })()}
+                              </p>
                               <p className="text-xs text-slate-500">ID: {getDisplayNumber(inv.invoice_number)}</p>
                             </div>
                           </div>
@@ -585,7 +592,24 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                           ) : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {isAguardando ? renderStatusBadge(inv, 'hourglass_empty', 'text-purple-500') : <span className="text-slate-300">-</span>}
+                          {isAguardando ? (
+                            <div className="flex flex-col items-center gap-1">
+                              {renderStatusBadge(inv, 'hourglass_empty', 'text-purple-500')}
+                              <button
+                                onClick={() => onUpdate({ ...inv, is_retirado: !inv.is_retirado })}
+                                className={`flex items-center gap-0.5 text-[8px] font-black px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${inv.is_retirado
+                                  ? 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100'
+                                  : 'text-rose-600 bg-rose-50 border-rose-100 hover:bg-rose-100'
+                                  }`}
+                                title={inv.is_retirado ? "Marcar como Sem Nota" : "Marcar como Nota Emitida"}
+                              >
+                                <span className="material-symbols-outlined text-[10px]">
+                                  {inv.is_retirado ? 'receipt_long' : 'pending_actions'}
+                                </span>
+                                {inv.is_retirado ? 'NOTA EMITIDA' : 'SEM NOTA'}
+                              </button>
+                            </div>
+                          ) : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex flex-col items-end">
@@ -706,81 +730,91 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                       }}
                     >
                       <option value="" className="text-slate-400">Selecione um cliente...</option>
-                      {state.clients.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
+                      {state.clients.map(c => {
+                        const contract = state.contracts?.find(con => con.client_id === c.id);
+                        const label = contract?.copan ? `${contract.copan} - ${c.name}` : c.name;
+                        return <option key={c.id} value={c.id} className="text-slate-900">{label}</option>;
+                      })}
                     </select>
                   )}
                 </div>
 
-                <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
-                    {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
-                  </label>
-                  <input
-                    id="invoice_number"
-                    name="invoice_number"
-                    type="text"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400"
-                    value={newInvoice.invoice_number}
-                    onChange={e => setNewInvoice(prev => ({ ...prev, invoice_number: e.target.value }))}
-                    placeholder={
-                      regType === 'INTERNET' ? 'Ex: INT-2024-001' :
-                        regType === 'SEM_NOTA' ? 'Ex: S/N ou Informação Adicional' :
-                          'Ex: NF-2024-001'
-                    }
-                  />
-                </div>
+                {regType !== 'AGUARDANDO' && (
+                  <>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">
+                        {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
+                      </label>
+                      <input
+                        id="invoice_number"
+                        name="invoice_number"
+                        type="text"
+                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400"
+                        value={newInvoice.invoice_number}
+                        onChange={e => setNewInvoice(prev => ({ ...prev, invoice_number: e.target.value }))}
+                        placeholder={
+                          regType === 'INTERNET' ? 'Ex: INT-2024-001' :
+                            regType === 'SEM_NOTA' ? 'Ex: S/N ou Informação Adicional' :
+                              'Ex: NF-2024-001'
+                        }
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Valor Original (R$)</label>
-                  <input
-                    required
-                    id="original_value"
-                    name="original_value"
-                    type="text"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 font-bold"
-                    value={newInvoice.original_value}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setNewInvoice(prev => ({ ...prev, original_value: val }));
-                    }}
-                    placeholder="0,00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimento</label>
-                  <input
-                    required
-                    id="due_date"
-                    name="due_date"
-                    type="date"
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
-                    value={newInvoice.due_date}
-                    onChange={e => setNewInvoice(prev => ({ ...prev, due_date: e.target.value }))}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Status</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.NOT_PAID }))}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status !== InvoiceStatus.PAID ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                    >
-                      EM ABERTO
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.PAID }))}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status === InvoiceStatus.PAID ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
-                    >
-                      PAGO
-                    </button>
-                  </div>
-                </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Valor Original (R$)</label>
+                      <input
+                        required
+                        id="original_value"
+                        name="original_value"
+                        type="text"
+                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 font-bold"
+                        value={newInvoice.original_value}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setNewInvoice(prev => ({ ...prev, original_value: val }));
+                        }}
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimento</label>
+                      <input
+                        required
+                        id="due_date"
+                        name="due_date"
+                        type="date"
+                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900"
+                        value={newInvoice.due_date}
+                        onChange={e => setNewInvoice(prev => ({ ...prev, due_date: e.target.value }))}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Status</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.NOT_PAID }))}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status !== InvoiceStatus.PAID ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                        >
+                          EM ABERTO
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.PAID }))}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status === InvoiceStatus.PAID ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                        >
+                          PAGO
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-                {regType === 'INTERNET' && (
+                {(regType === 'INTERNET' || regType === 'AGUARDANDO') && (
                   <div className="col-span-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Boleto Retirado da Internet?</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      {regType === 'INTERNET' ? 'Boleto Retirado da Internet?' : 'Emitiu Nota?'}
+                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
