@@ -563,9 +563,11 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{formatCurrency(inv.original_value)}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                          {isAguardando ? <span className="text-slate-300">-</span> : formatCurrency(inv.original_value)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {isAguardando ? <span className="text-slate-300">-</span> : new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {isStandard ? renderStatusBadge(inv, 'local_fire_department', 'text-orange-500') : <span className="text-slate-300">-</span>}
@@ -594,7 +596,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                         <td className="px-6 py-4 text-center">
                           {isAguardando ? (
                             <div className="flex flex-col items-center gap-1">
-                              {renderStatusBadge(inv, 'hourglass_empty', 'text-purple-500')}
+                              {/* Removed standard status badge as requested */}
                               <button
                                 onClick={() => onUpdate({ ...inv, is_retirado: !inv.is_retirado })}
                                 className={`flex items-center gap-0.5 text-[8px] font-black px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${inv.is_retirado
@@ -613,7 +615,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex flex-col items-end">
-                            <span className="text-sm font-bold text-slate-900">{formatCurrency(inv.final_value)}</span>
+                            <span className="text-sm font-bold text-slate-900">
+                              {isAguardando ? <span className="text-slate-300">-</span> : formatCurrency(inv.final_value)}
+                            </span>
                             {inv.penalty_applied && (
                               <span className="text-[9px] text-rose-500 font-medium text-right leading-tight">
                                 Inclui multa, juros e taxas<br />
@@ -631,7 +635,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                             >
                               <span className="material-symbols-outlined text-lg">edit</span>
                             </button>
-                            {inv.status !== InvoiceStatus.PAID && (
+                            {!isAguardando && inv.status !== InvoiceStatus.PAID && (
                               <button
                                 onClick={() => onPay(inv.id)}
                                 className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
