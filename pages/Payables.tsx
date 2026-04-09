@@ -66,7 +66,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         const matchesMonth = monthFilter === 'ALL' || date.getMonth() === monthFilter;
         const matchesYear = yearFilter === 'ALL' || date.getFullYear() === yearFilter;
         return matchesSearch && matchesMonth && matchesYear;
-    }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+    }).sort((a, b) => a.description.localeCompare(b.description));
 
     const generatePDF = () => {
         const doc = new jsPDF();
