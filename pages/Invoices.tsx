@@ -633,7 +633,6 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                         <td className="px-6 py-4 text-center">
                           {isAguardando ? (
                             <div className="flex flex-col items-center gap-1">
-                              {/* Removed standard status badge as requested */}
                               <button
                                 onClick={() => {
                                   if (inv.id.startsWith('VIRTUAL-')) {
@@ -697,11 +696,16 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => onDelete(inv.id)}
+                                  onClick={() => {
+                                    if (confirm('Deseja remover este cliente de TODO o checklist mensal? Isso apagará o histórico deste controle para este cliente.')) {
+                                      const allRelated = state.invoices.filter(i => i.client_id === inv.client_id && i.invoice_number?.startsWith('AGU-'));
+                                      allRelated.forEach(i => onDelete(i.id));
+                                    }
+                                  }}
                                   className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                                  title="Excluir"
+                                  title="Remover do Checklist"
                                 >
-                                  <span className="material-symbols-outlined text-lg">delete</span>
+                                  <span className="material-symbols-outlined text-lg">delete_sweep</span>
                                 </button>
                               </>
                             )}
