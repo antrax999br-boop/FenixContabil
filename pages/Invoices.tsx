@@ -42,7 +42,45 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
 
-  const filteredInvoices = state.invoices.filter((i: Invoice) => {
+  const aguardandoClientIds = Array.from(new Set(
+    state.invoices
+      .filter(inv => inv.invoice_number?.startsWith('AGU-'))
+      .map(inv => inv.client_id)
+  ));
+
+  const displayInvoices = (filter === 'AGUARDANDO' && monthFilter !== 'ALL' && yearFilter !== 'ALL')
+    ? aguardandoClientIds.map(cid => {
+      const actual = state.invoices.find(inv =>
+        inv.client_id === cid &&
+        inv.invoice_number?.startsWith('AGU-') &&
+        new Date(inv.due_date + 'T12:00:00').getMonth() === monthFilter &&
+        new Date(inv.due_date + 'T12:00:00').getFullYear() === (yearFilter as number)
+      );
+      if (actual) return actual;
+
+      const filterYear = yearFilter === 'ALL' ? new Date().getFullYear() : yearFilter;
+      const filterMonth = monthFilter === 'ALL' ? new Date().getMonth() : monthFilter;
+
+      return {
+        id: `VIRTUAL-${cid}-${filterYear}-${filterMonth}`,
+        client_id: cid,
+        invoice_number: 'AGU-PEND',
+        due_date: `${filterYear}-${String((filterMonth as number) + 1).padStart(2, '0')}-01`,
+        is_retirado: false,
+        original_value: 0,
+        final_value: 0,
+        status: InvoiceStatus.NOT_PAID,
+        penalty_applied: false,
+        fine_value: 0,
+        interest_value: 0,
+        reissue_tax: 0,
+        postage_tax: 0,
+        days_overdue: 0
+      } as Invoice;
+    })
+    : state.invoices;
+
+  const filteredInvoices = displayInvoices.filter((i: Invoice) => {
     const client = state.clients.find(c => c.id === i.client_id);
 
     const isAguardando = i.invoice_number?.startsWith('AGU-');
@@ -50,7 +88,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     const isSemNota = !isAguardando && !isInternet && (i.invoice_number?.startsWith('SN-') || !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
     const isStandard = !isAguardando && !isInternet && !isSemNota;
 
-    // Isolar Boletos Internet: Se não for o filtro específico de INTERNET, não mostrar boletos de internet
+    // Isolar Boletos Internet
     if (filter === 'INTERNET') {
       if (!isInternet) return false;
     } else {
@@ -59,7 +97,6 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
 
     let matchesStatus = false;
     if (filter === 'ALL' || filter === 'INTERNET') {
-      // General view (now excluding internet) or Internet specific view
       matchesStatus = true;
     } else if (filter === 'ATIVOS') {
       matchesStatus = isStandard;
@@ -598,7 +635,20 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                             <div className="flex flex-col items-center gap-1">
                               {/* Removed standard status badge as requested */}
                               <button
-                                onClick={() => onUpdate({ ...inv, is_retirado: !inv.is_retirado })}
+                                onClick={() => {
+                                  if (inv.id.startsWith('VIRTUAL-')) {
+                                    onAdd({
+                                      client_id: inv.client_id,
+                                      invoice_number: 'AGU-PEND',
+                                      due_date: inv.due_date,
+                                      is_retirado: !inv.is_retirado,
+                                      original_value: 0,
+                                      status: InvoiceStatus.NOT_PAID
+                                    } as any);
+                                  } else {
+                                    onUpdate({ ...inv, is_retirado: !inv.is_retirado });
+                                  }
+                                }}
                                 className={`flex items-center gap-0.5 text-[8px] font-black px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${inv.is_retirado
                                   ? 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100'
                                   : 'text-rose-600 bg-rose-50 border-rose-100 hover:bg-rose-100'
@@ -628,29 +678,33 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => openEditModal(inv)}
-                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Editar"
-                            >
-                              <span className="material-symbols-outlined text-lg">edit</span>
-                            </button>
-                            {!isAguardando && inv.status !== InvoiceStatus.PAID && (
-                              <button
-                                onClick={() => onPay(inv.id)}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                title="Marcar como Pago"
-                              >
-                                <span className="material-symbols-outlined text-lg">check_circle</span>
-                              </button>
+                            {!inv.id.startsWith('VIRTUAL-') && (
+                              <>
+                                <button
+                                  onClick={() => openEditModal(inv)}
+                                  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Editar"
+                                >
+                                  <span className="material-symbols-outlined text-lg">edit</span>
+                                </button>
+                                {!isAguardando && inv.status !== InvoiceStatus.PAID && (
+                                  <button
+                                    onClick={() => onPay(inv.id)}
+                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                    title="Marcar como Pago"
+                                  >
+                                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => onDelete(inv.id)}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                  title="Excluir"
+                                >
+                                  <span className="material-symbols-outlined text-lg">delete</span>
+                                </button>
+                              </>
                             )}
-                            <button
-                              onClick={() => onDelete(inv.id)}
-                              className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                              title="Excluir"
-                            >
-                              <span className="material-symbols-outlined text-lg">delete</span>
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -743,28 +797,45 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                   )}
                 </div>
 
+                {(regType !== 'AGUARDANDO') && (
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
+                    </label>
+                    <input
+                      id="invoice_number"
+                      name="invoice_number"
+                      type="text"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400"
+                      value={newInvoice.invoice_number}
+                      onChange={e => setNewInvoice(prev => ({ ...prev, invoice_number: e.target.value }))}
+                      placeholder={
+                        regType === 'INTERNET' ? 'Ex: INT-2024-001' :
+                          regType === 'SEM_NOTA' ? 'Ex: S/N ou Informação Adicional' :
+                            'Ex: NF-2024-001'
+                      }
+                    />
+                  </div>
+                )}
+
+                {regType === 'AGUARDANDO' && (
+                  <div className="col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Data de Referência (Mês/Ano)</label>
+                    <input
+                      required
+                      id="due_date"
+                      name="due_date"
+                      type="date"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 font-bold"
+                      value={newInvoice.due_date}
+                      onChange={e => setNewInvoice(prev => ({ ...prev, due_date: e.target.value }))}
+                    />
+                  </div>
+                )}
+
                 {regType !== 'AGUARDANDO' && (
                   <>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-semibold text-slate-700 mb-1">
-                        {regType === 'INTERNET' ? 'ID do Registro Internet' : 'Número do Boleto'}
-                      </label>
-                      <input
-                        id="invoice_number"
-                        name="invoice_number"
-                        type="text"
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none bg-white text-slate-900 placeholder:text-slate-400"
-                        value={newInvoice.invoice_number}
-                        onChange={e => setNewInvoice(prev => ({ ...prev, invoice_number: e.target.value }))}
-                        placeholder={
-                          regType === 'INTERNET' ? 'Ex: INT-2024-001' :
-                            regType === 'SEM_NOTA' ? 'Ex: S/N ou Informação Adicional' :
-                              'Ex: NF-2024-001'
-                        }
-                      />
-                    </div>
-
-                    <div>
+                    <div className="col-span-1">
                       <label className="block text-sm font-semibold text-slate-700 mb-1">Valor Original (R$)</label>
                       <input
                         required
@@ -780,7 +851,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                         placeholder="0,00"
                       />
                     </div>
-                    <div>
+                    <div className="col-span-1">
                       <label className="block text-sm font-semibold text-slate-700 mb-1">Vencimento</label>
                       <input
                         required
