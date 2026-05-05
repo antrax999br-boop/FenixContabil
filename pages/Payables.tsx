@@ -127,6 +127,44 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         }
     };
 
+    const handleCleanDuplicates = async () => {
+        const payables = state.payables || [];
+        const seen = new Map<string, string>(); // key -> id to keep
+        const toDelete: string[] = [];
+
+        payables.forEach(p => {
+            if (!p.due_date) return;
+            const parts = p.due_date.split('-');
+            const key = `${(p.description || '').trim().toUpperCase()}-${parts[0]}-${parts[1]}-${p.value}`;
+
+            if (seen.has(key)) {
+                const existingId = seen.get(key)!;
+                const existing = payables.find(x => x.id === existingId);
+                // Keep the PAID one if available
+                if (p.status === InvoiceStatus.PAID && existing?.status !== InvoiceStatus.PAID) {
+                    toDelete.push(existingId);
+                    seen.set(key, p.id);
+                } else {
+                    toDelete.push(p.id);
+                }
+            } else {
+                seen.set(key, p.id);
+            }
+        });
+
+        if (toDelete.length === 0) {
+            alert('Nenhum item duplicado real encontrado.');
+            return;
+        }
+
+        if (window.confirm(`Encontramos ${toDelete.length} itens duplicados (mesma descrição, valor e mês). Deseja removê-los e manter apenas um de cada?`)) {
+            for (const id of toDelete) {
+                onDelete(id);
+            }
+            alert(`${toDelete.length} duplicatas removidas com sucesso.`);
+        }
+    };
+
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingPayable(null);
@@ -310,6 +348,14 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                     <h2 className="text-3xl font-black tracking-tight text-slate-900">Contas a Pagar</h2>
                 </div>
                 <div className="flex gap-3">
+                    <button
+                        onClick={handleCleanDuplicates}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-rose-200 rounded-lg text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors shadow-sm"
+                        title="Remover lançamentos idênticos no mesmo mês"
+                    >
+                        <span className="material-symbols-outlined text-sm">cleaning_services</span>
+                        Limpar Duplicados
+                    </button>
                     <button
                         onClick={generatePDF}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"
