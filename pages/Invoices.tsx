@@ -48,37 +48,90 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       .map(inv => inv.client_id)
   ));
 
-  const displayInvoices = (filter === 'AGUARDANDO' && monthFilter !== 'ALL' && yearFilter !== 'ALL')
-    ? aguardandoClientIds.map(cid => {
-      const actual = state.invoices.find(inv =>
-        inv.client_id === cid &&
-        inv.invoice_number?.startsWith('AGU-') &&
-        new Date(inv.due_date + 'T12:00:00').getMonth() === monthFilter &&
-        new Date(inv.due_date + 'T12:00:00').getFullYear() === (yearFilter as number)
-      );
-      if (actual) return actual;
+  const internetTemplates = Array.from(new Set(
+    state.invoices
+      .filter(inv => {
+        const isAguardando = inv.invoice_number?.startsWith('AGU-');
+        const isInternet = !isAguardando && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
+        return isInternet;
+      })
+      .map(inv => inv.individual_name)
+  )).filter(Boolean) as string[];
 
-      const filterYear = yearFilter === 'ALL' ? new Date().getFullYear() : yearFilter;
-      const filterMonth = monthFilter === 'ALL' ? new Date().getMonth() : monthFilter;
+  const displayInvoices = (() => {
+    if (monthFilter === 'ALL' || yearFilter === 'ALL') return state.invoices;
 
-      return {
-        id: `VIRTUAL-${cid}-${filterYear}-${filterMonth}`,
-        client_id: cid,
-        invoice_number: 'AGU-PEND',
-        due_date: `${filterYear}-${String((filterMonth as number) + 1).padStart(2, '0')}-01`,
-        is_retirado: false,
-        original_value: 0,
-        final_value: 0,
-        status: InvoiceStatus.NOT_PAID,
-        penalty_applied: false,
-        fine_value: 0,
-        interest_value: 0,
-        reissue_tax: 0,
-        postage_tax: 0,
-        days_overdue: 0
-      } as Invoice;
-    })
-    : state.invoices;
+    if (filter === 'AGUARDANDO') {
+      return aguardandoClientIds.map(cid => {
+        const actual = state.invoices.find(inv =>
+          inv.client_id === cid &&
+          inv.invoice_number?.startsWith('AGU-') &&
+          new Date(inv.due_date + 'T12:00:00').getMonth() === monthFilter &&
+          new Date(inv.due_date + 'T12:00:00').getFullYear() === (yearFilter as number)
+        );
+        if (actual) return actual;
+
+        const filterYear = yearFilter as number;
+        const filterMonth = monthFilter as number;
+
+        return {
+          id: `VIRTUAL-AGU-${cid}-${filterYear}-${filterMonth}`,
+          client_id: cid,
+          invoice_number: 'AGU-PEND',
+          due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-01`,
+          is_retirado: false,
+          original_value: 0,
+          final_value: 0,
+          status: InvoiceStatus.NOT_PAID,
+          penalty_applied: false,
+          fine_value: 0,
+          interest_value: 0,
+          reissue_tax: 0,
+          postage_tax: 0,
+          days_overdue: 0
+        } as Invoice;
+      });
+    }
+
+    if (filter === 'INTERNET') {
+      return internetTemplates.map(name => {
+        const actual = state.invoices.find(inv =>
+          inv.individual_name === name &&
+          (inv.invoice_number?.startsWith('INT-') || !inv.client_id) &&
+          new Date(inv.due_date + 'T12:00:00').getMonth() === monthFilter &&
+          new Date(inv.due_date + 'T12:00:00').getFullYear() === (yearFilter as number)
+        );
+        if (actual) return actual;
+
+        const latest = [...state.invoices]
+          .filter(inv => inv.individual_name === name)
+          .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())[0];
+
+        const filterYear = yearFilter as number;
+        const filterMonth = monthFilter as number;
+
+        return {
+          id: `VIRTUAL-INT-${name}-${filterYear}-${filterMonth}`,
+          individual_name: name,
+          client_id: latest?.client_id || null,
+          invoice_number: latest?.invoice_number || 'INT-AUTOGEN',
+          due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-01`,
+          is_retirado: false,
+          original_value: latest?.original_value || 0,
+          final_value: latest?.original_value || 0,
+          status: InvoiceStatus.NOT_PAID,
+          penalty_applied: false,
+          fine_value: 0,
+          interest_value: 0,
+          reissue_tax: 0,
+          postage_tax: 0,
+          days_overdue: 0
+        } as Invoice;
+      });
+    }
+
+    return state.invoices;
+  })();
 
   const filteredInvoices = displayInvoices.filter((i: Invoice) => {
     const client = state.clients.find(c => c.id === i.client_id);
@@ -616,17 +669,32 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                           {isInternet ? (
                             <div className="flex flex-col items-center gap-1">
                               {renderStatusBadge(inv, 'language', 'text-blue-500')}
-                              {inv.is_retirado ? (
-                                <div className="flex items-center gap-0.5 text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100">
-                                  <span className="material-symbols-outlined text-[10px]">cloud_done</span>
-                                  RETIRADO
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-0.5 text-[8px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-100">
-                                  <span className="material-symbols-outlined text-[10px]">cloud_off</span>
-                                  NÃO RETIRADO
-                                </div>
-                              )}
+                              <button
+                                onClick={() => {
+                                  if (inv.id.startsWith('VIRTUAL-')) {
+                                    onAdd({
+                                      individual_name: inv.individual_name,
+                                      client_id: inv.client_id,
+                                      invoice_number: inv.invoice_number || 'INT-AUTOGEN',
+                                      due_date: inv.due_date,
+                                      is_retirado: !inv.is_retirado,
+                                      original_value: inv.original_value,
+                                      status: InvoiceStatus.NOT_PAID
+                                    } as any);
+                                  } else {
+                                    onUpdate({ ...inv, is_retirado: !inv.is_retirado });
+                                  }
+                                }}
+                                className={`flex items-center gap-0.5 text-[8px] font-black px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${inv.is_retirado
+                                  ? 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100'
+                                  : 'text-rose-600 bg-rose-50 border-rose-100 hover:bg-rose-100'
+                                  }`}
+                              >
+                                <span className="material-symbols-outlined text-[10px]">
+                                  {inv.is_retirado ? 'cloud_done' : 'cloud_off'}
+                                </span>
+                                {inv.is_retirado ? 'RETIRADO' : 'NÃO RETIRADO'}
+                              </button>
                             </div>
                           ) : <span className="text-slate-300">-</span>}
                         </td>
@@ -677,36 +745,54 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {!inv.id.startsWith('VIRTUAL-') && (
+                            {(!inv.id.startsWith('VIRTUAL-') || inv.id.startsWith('VIRTUAL-INT-')) && (
                               <>
-                                <button
-                                  onClick={() => openEditModal(inv)}
-                                  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Editar"
-                                >
-                                  <span className="material-symbols-outlined text-lg">edit</span>
-                                </button>
+                                {!inv.id.startsWith('VIRTUAL-') && (
+                                  <button
+                                    onClick={() => openEditModal(inv)}
+                                    className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Editar"
+                                  >
+                                    <span className="material-symbols-outlined text-lg">edit</span>
+                                  </button>
+                                )}
                                 {!isAguardando && inv.status !== InvoiceStatus.PAID && (
                                   <button
-                                    onClick={() => onPay(inv.id)}
+                                    onClick={() => {
+                                      if (inv.id.startsWith('VIRTUAL-')) {
+                                        onAdd({
+                                          individual_name: inv.individual_name,
+                                          client_id: inv.client_id,
+                                          invoice_number: inv.invoice_number || 'INT-AUTOGEN',
+                                          due_date: inv.due_date,
+                                          is_retirado: inv.is_retirado,
+                                          original_value: inv.original_value,
+                                          status: InvoiceStatus.PAID
+                                        } as any);
+                                      } else {
+                                        onPay(inv.id);
+                                      }
+                                    }}
                                     className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                     title="Marcar como Pago"
                                   >
                                     <span className="material-symbols-outlined text-lg">check_circle</span>
                                   </button>
                                 )}
-                                <button
-                                  onClick={() => {
-                                    if (confirm('Deseja remover este cliente de TODO o checklist mensal? Isso apagará o histórico deste controle para este cliente.')) {
-                                      const allRelated = state.invoices.filter(i => i.client_id === inv.client_id && i.invoice_number?.startsWith('AGU-'));
-                                      allRelated.forEach(i => onDelete(i.id));
-                                    }
-                                  }}
-                                  className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                                  title="Remover do Checklist"
-                                >
-                                  <span className="material-symbols-outlined text-lg">delete_sweep</span>
-                                </button>
+                                {!inv.id.startsWith('VIRTUAL-') && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm('Deseja remover este cliente de TODO o checklist mensal? Isso apagará o histórico deste controle para este cliente.')) {
+                                        const allRelated = state.invoices.filter(i => i.client_id === inv.client_id && i.invoice_number?.startsWith('AGU-'));
+                                        allRelated.forEach(i => onDelete(i.id));
+                                      }
+                                    }}
+                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                    title="Remover do Checklist"
+                                  >
+                                    <span className="material-symbols-outlined text-lg">delete_sweep</span>
+                                  </button>
+                                )}
                               </>
                             )}
                           </div>
