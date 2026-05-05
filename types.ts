@@ -66,6 +66,7 @@ export interface Payable {
   payment_date?: string | null;
   prazo?: string;
   status: InvoiceStatus;
+  is_recurring?: boolean;
   created_at?: string;
 }
 

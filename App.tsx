@@ -555,24 +555,43 @@ const App: React.FC = () => {
     }
   };
 
-  const addPayable = async (payableData: Omit<Payable, 'id' | 'status'>) => {
-    const newP: Payable = {
-      ...payableData,
-      id: crypto.randomUUID(),
-      status: payableData.due_date < new Date().toISOString().split('T')[0] ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID,
-      created_at: new Date().toISOString()
-    };
+  const addPayable = async (payableData: Omit<Payable, 'id' | 'status'> & { installments?: number }) => {
+    const installments = payableData.installments || 1;
+    const baseDueDate = new Date(payableData.due_date + 'T12:00:00');
+    
+    const newPayables: Payable[] = [];
+    
+    for (let i = 0; i < installments; i++) {
+        const dueDate = new Date(baseDueDate);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        
+        const desc = installments > 1 
+            ? `${payableData.description} ${i + 1}/${installments}`
+            : payableData.description;
+
+        const newP: Payable = {
+          ...payableData,
+          description: desc,
+          due_date: dueDate.toISOString().split('T')[0],
+          id: crypto.randomUUID(),
+          status: dueDate.toISOString().split('T')[0] < getLocalDateString() ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID,
+          created_at: new Date().toISOString()
+        };
+        // Remove virtual field before saving
+        const { installments: _, ...pToSave } = newP as any;
+        newPayables.push(pToSave);
+    }
 
     // Try Supabase first
-    const { error } = await supabase.from('payables').insert([newP]);
+    const { error } = await supabase.from('payables').insert(newPayables);
 
     if (error) {
-      console.warn('Failed to save payable to Supabase, saving to localStorage:', error);
-      const updated = [...state.payables, newP];
+      console.warn('Failed to save payables to Supabase, saving to localStorage:', error);
+      const updated = [...state.payables, ...newPayables];
       localStorage.setItem('fenix_payables', JSON.stringify(updated));
       setState(prev => ({ ...prev, payables: updated }));
     } else {
-      setState(prev => ({ ...prev, payables: [...prev.payables, newP] }));
+      setState(prev => ({ ...prev, payables: [...prev.payables, ...newPayables] }));
     }
   };
 

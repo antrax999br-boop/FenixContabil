@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 
 interface PayablesPageProps {
     state: AppState;
-    onAdd: (payable: Omit<Payable, 'id' | 'status'>) => void;
+    onAdd: (payable: Omit<Payable, 'id' | 'status'> & { installments?: number }) => void;
     onUpdate: (payable: Payable) => void;
     onPay: (id: string) => void;
     onDelete: (id: string) => void;
@@ -33,7 +33,10 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         value: 0,
         due_date: getLocalDateString(),
         prazo: '',
-        status: InvoiceStatus.NOT_PAID
+        status: InvoiceStatus.NOT_PAID,
+        is_recurring: false,
+        is_installment: false,
+        installments: 1
     });
 
     const handleOpenEdit = (payable: Payable) => {
@@ -43,7 +46,10 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
             value: payable.value,
             due_date: payable.due_date,
             prazo: payable.prazo || '',
-            status: payable.status
+            status: payable.status,
+            is_recurring: payable.is_recurring || false,
+            is_installment: false,
+            installments: 1
         });
         setShowModal(true);
     };
@@ -129,12 +135,17 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
             value: 0,
             due_date: getLocalDateString(),
             prazo: '',
-            status: InvoiceStatus.NOT_PAID
+            status: InvoiceStatus.NOT_PAID,
+            is_recurring: false,
+            is_installment: false,
+            installments: 1
         });
     };
 
     const payableTemplates = Array.from(new Set(
-        (state.payables || []).map(p => (p.description || '').trim())
+        (state.payables || [])
+            .filter(p => p.is_recurring) // Only virtualize recurring items
+            .map(p => (p.description || '').trim())
     )).filter(Boolean);
 
     const displayPayables = (() => {
@@ -277,9 +288,11 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                 ...newPayable
             });
         } else {
-            // New payable defaults to NOT_PAID or OVERDUE logic handled in App.tsx
-            const { status, ...payableWithoutStatus } = newPayable;
-            onAdd(payableWithoutStatus);
+            const { is_installment, installments, status, ...payableData } = newPayable;
+            onAdd({
+                ...payableData,
+                installments: is_installment ? installments : 1
+            });
         }
 
         handleCloseModal();
@@ -589,6 +602,54 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                         <option value={InvoiceStatus.NOT_PAID}>Pendente / Não Pago</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            <div className="bg-slate-50 p-4 rounded-xl space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-rose-600 text-lg">event_repeat</span>
+                                        <label className="text-sm font-bold text-slate-700">Despesa Fixa (Recorrente)</label>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 size-5 cursor-pointer"
+                                        checked={newPayable.is_recurring}
+                                        onChange={e => setNewPayable({ ...newPayable, is_recurring: e.target.checked, is_installment: false })}
+                                    />
+                                </div>
+                                <p className="text-[10px] text-slate-500 italic">Itens marcados como fixos aparecerão automaticamente em todos os meses futuros.</p>
+
+                                {!newPayable.is_recurring && (
+                                    <>
+                                        <hr className="border-slate-200" />
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-rose-600 text-lg">payments</span>
+                                                <label className="text-sm font-bold text-slate-700">Parcelar?</label>
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 size-5 cursor-pointer"
+                                                checked={newPayable.is_installment}
+                                                onChange={e => setNewPayable({ ...newPayable, is_installment: e.target.checked })}
+                                            />
+                                        </div>
+
+                                        {newPayable.is_installment && (
+                                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                                                <label className="text-xs font-black text-slate-500 uppercase">Quantidade de Parcelas:</label>
+                                                <input
+                                                    type="number"
+                                                    min="2"
+                                                    max="48"
+                                                    className="w-20 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-bold"
+                                                    value={newPayable.installments}
+                                                    onChange={e => setNewPayable({ ...newPayable, installments: parseInt(e.target.value) || 2 })}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                             <div className="pt-2">
                                 <button
