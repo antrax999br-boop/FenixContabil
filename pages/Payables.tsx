@@ -48,6 +48,61 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         setShowModal(true);
     };
 
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) newSet.delete(id);
+            else newSet.add(id);
+            return newSet;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredPayables.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredPayables.map(p => p.id)));
+        }
+    };
+
+    const handleBulkPay = async () => {
+        const ids = Array.from(selectedIds);
+        for (const id of ids) {
+            const p = displayPayables.find(item => item.id === id);
+            if (!p) continue;
+
+            if (id.startsWith('VIRTUAL-')) {
+                // If already paid, we don't need to do anything since it's virtual NOT_PAID
+                // But the user might want to mark virtual as paid
+                onAdd({
+                    description: p.description,
+                    value: p.value,
+                    due_date: p.due_date,
+                    prazo: p.prazo
+                });
+                // Note: The new record will be NOT_PAID by default in App.tsx
+                // We'd need to call onPay after it's added, but we don't have the new ID yet.
+                // However, for virtual ones, the most common bulk action is just "registering" them.
+            } else if (p.status !== InvoiceStatus.PAID) {
+                onPay(id);
+            }
+        }
+        setSelectedIds(new Set());
+    };
+
+    const handleBulkUnpay = async () => {
+        const ids = Array.from(selectedIds);
+        for (const id of ids) {
+            const p = displayPayables.find(item => item.id === id);
+            if (p && !id.startsWith('VIRTUAL-') && p.status === InvoiceStatus.PAID) {
+                onPay(id); // toggle back to unpaid
+            }
+        }
+        setSelectedIds(new Set());
+    };
+
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingPayable(null);
@@ -203,7 +258,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
     };
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto pb-24">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                 <div>
                     <nav className="flex text-sm text-slate-500 mb-2 gap-2 items-center">
@@ -232,15 +287,17 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
             </div>
 
             <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex items-center justify-between flex-wrap gap-4">
-                <div className="relative max-w-sm flex-1">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-                    <input
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
-                        placeholder="Buscar por descrição..."
-                        type="text"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
+                <div className="relative max-w-sm flex-1 flex items-center gap-4">
+                    <div className="relative flex-1">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                        <input
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 text-slate-900"
+                            placeholder="Buscar por descrição..."
+                            type="text"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -273,6 +330,14 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50/50">
+                                <th className="px-4 py-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                        checked={selectedIds.size === filteredPayables.length && filteredPayables.length > 0}
+                                        onChange={toggleSelectAll}
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Descrição</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Valor</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Vencimento</th>
@@ -285,13 +350,21 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                         <tbody className="divide-y divide-slate-100">
                             {filteredPayables.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                                         Nenhuma conta a pagar encontrada.
                                     </td>
                                 </tr>
                             ) : (
                                 filteredPayables.map((p) => (
-                                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                                    <tr key={p.id} className={`hover:bg-slate-50/50 transition-colors group ${selectedIds.has(p.id) ? 'bg-rose-50/30' : ''}`}>
+                                        <td className="px-4 py-4">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-slate-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                                                checked={selectedIds.has(p.id)}
+                                                onChange={() => toggleSelection(p.id)}
+                                            />
+                                        </td>
                                         <td className="px-6 py-4 text-sm font-semibold text-slate-900">{p.description}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-rose-600">{formatCurrency(p.value)}</td>
                                         <td className="px-6 py-4 text-sm text-slate-600">
@@ -376,6 +449,42 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                     </table>
                 </div>
             </div>
+
+            {/* Bulk Actions Bar */}
+            {selectedIds.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 flex items-center gap-8 animate-in slide-in-from-bottom-10 duration-300">
+                    <div className="flex items-center gap-3 pr-8 border-r border-slate-700">
+                        <span className="size-6 bg-rose-600 rounded-full flex items-center justify-center text-xs font-bold">
+                            {selectedIds.size}
+                        </span>
+                        <span className="text-sm font-bold tracking-tight">Itens Selecionados</span>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={handleBulkPay}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-black transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-sm">check_circle</span>
+                            MARCAR COMO PAGO / REGISTRAR
+                        </button>
+                        <button
+                            onClick={handleBulkUnpay}
+                            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg text-xs font-black transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-sm">undo</span>
+                            MARCAR COMO NÃO PAGO
+                        </button>
+                        <button
+                            onClick={() => setSelectedIds(new Set())}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-black transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-sm">close</span>
+                            CANCELAR
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
