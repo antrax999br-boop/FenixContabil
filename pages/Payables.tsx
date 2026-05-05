@@ -60,12 +60,43 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         });
     };
 
-    const filteredPayables = (state.payables || []).filter(p => {
+    const payableTemplates = Array.from(new Set(
+        (state.payables || []).map(p => p.description)
+    )).filter(Boolean);
+
+    const displayPayables = (() => {
+        if (monthFilter === 'ALL' || yearFilter === 'ALL') return state.payables || [];
+
+        return payableTemplates.map(desc => {
+            const actual = (state.payables || []).find(p =>
+                p.description === desc &&
+                new Date(p.due_date + 'T12:00:00').getMonth() === monthFilter &&
+                new Date(p.due_date + 'T12:00:00').getFullYear() === (yearFilter as number)
+            );
+            if (actual) return actual;
+
+            const latest = [...(state.payables || [])]
+                .filter(p => p.description === desc)
+                .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())[0];
+
+            const filterYear = yearFilter as number;
+            const filterMonth = monthFilter as number;
+
+            return {
+                id: `VIRTUAL-PAY-${desc}-${filterYear}-${filterMonth}`,
+                description: desc,
+                value: latest?.value || 0,
+                due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-01`,
+                prazo: latest?.prazo || '',
+                status: InvoiceStatus.NOT_PAID,
+                payment_date: null
+            } as Payable;
+        });
+    })();
+
+    const filteredPayables = displayPayables.filter(p => {
         const matchesSearch = p.description.toLowerCase().includes(searchTerm.toLowerCase());
-        const date = new Date(p.due_date + 'T12:00:00');
-        const matchesMonth = monthFilter === 'ALL' || date.getMonth() === monthFilter;
-        const matchesYear = yearFilter === 'ALL' || date.getFullYear() === yearFilter;
-        return matchesSearch && matchesMonth && matchesYear;
+        return matchesSearch;
     }).sort((a, b) => a.description.localeCompare(b.description));
 
     const generatePDF = () => {
@@ -296,7 +327,18 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
-                                                    onClick={() => onPay(p.id)}
+                                                    onClick={() => {
+                                                        if (p.id.startsWith('VIRTUAL-')) {
+                                                            onAdd({
+                                                                description: p.description,
+                                                                value: p.value,
+                                                                due_date: p.due_date,
+                                                                prazo: p.prazo
+                                                            });
+                                                        } else {
+                                                            onPay(p.id);
+                                                        }
+                                                    }}
                                                     className={`p-1.5 rounded-lg transition-colors ${p.status === InvoiceStatus.PAID
                                                         ? 'text-slate-400 hover:bg-slate-50'
                                                         : 'text-emerald-600 hover:bg-emerald-50'
@@ -307,20 +349,24 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                                         {p.status === InvoiceStatus.PAID ? 'check_circle' : 'radio_button_unchecked'}
                                                     </span>
                                                 </button>
-                                                <button
-                                                    onClick={() => handleOpenEdit(p)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Editar"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">edit</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => onDelete(p.id)}
-                                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                                                    title="Excluir"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">delete</span>
-                                                </button>
+                                                {!p.id.startsWith('VIRTUAL-') && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleOpenEdit(p)}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">edit</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onDelete(p.id)}
+                                                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                            title="Excluir"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
