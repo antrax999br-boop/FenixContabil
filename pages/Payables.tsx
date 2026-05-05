@@ -122,31 +122,35 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
     const displayPayables = (() => {
         if (monthFilter === 'ALL' || yearFilter === 'ALL') return state.payables || [];
 
-        return payableTemplates.map(desc => {
-            const actual = (state.payables || []).find(p =>
-                p.description === desc &&
-                new Date(p.due_date + 'T12:00:00').getMonth() === monthFilter &&
-                new Date(p.due_date + 'T12:00:00').getFullYear() === (yearFilter as number)
-            );
-            if (actual) return actual;
-
-            const latest = [...(state.payables || [])]
-                .filter(p => p.description === desc)
-                .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())[0];
-
-            const filterYear = yearFilter as number;
-            const filterMonth = monthFilter as number;
-
-            return {
-                id: `VIRTUAL-PAY-${desc}-${filterYear}-${filterMonth}`,
-                description: desc,
-                value: latest?.value || 0,
-                due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-01`,
-                prazo: latest?.prazo || '',
-                status: InvoiceStatus.NOT_PAID,
-                payment_date: null
-            } as Payable;
+        const realPayablesInMonth = (state.payables || []).filter(p => {
+            const date = new Date(p.due_date + 'T12:00:00');
+            return date.getMonth() === monthFilter && date.getFullYear() === (yearFilter as number);
         });
+
+        const presentDescriptions = new Set(realPayablesInMonth.map(p => p.description));
+
+        const virtualPayables = payableTemplates
+            .filter(desc => !presentDescriptions.has(desc))
+            .map(desc => {
+                const latest = [...(state.payables || [])]
+                    .filter(p => p.description === desc)
+                    .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())[0];
+
+                const filterYear = yearFilter as number;
+                const filterMonth = monthFilter as number;
+
+                return {
+                    id: `VIRTUAL-PAY-${desc}-${filterYear}-${filterMonth}`,
+                    description: desc,
+                    value: latest?.value || 0,
+                    due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-01`,
+                    prazo: latest?.prazo || '',
+                    status: InvoiceStatus.NOT_PAID,
+                    payment_date: null
+                } as Payable;
+            });
+
+        return [...realPayablesInMonth, ...virtualPayables];
     })();
 
     const filteredPayables = displayPayables.filter(p => {
