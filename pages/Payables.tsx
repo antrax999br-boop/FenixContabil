@@ -103,6 +103,24 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         setSelectedIds(new Set());
     };
 
+    const handleBulkDelete = async () => {
+        const ids = Array.from(selectedIds);
+        const realIds = ids.filter(id => !id.startsWith('VIRTUAL-'));
+
+        if (realIds.length === 0) {
+            alert('Não há itens reais para excluir. Itens virtuais não podem ser excluídos individualmente do banco de dados.');
+            setSelectedIds(new Set());
+            return;
+        }
+
+        if (window.confirm(`Deseja excluir permanentemente os ${realIds.length} itens selecionados?`)) {
+            for (const id of realIds) {
+                onDelete(id);
+            }
+            setSelectedIds(new Set());
+        }
+    };
+
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingPayable(null);
@@ -484,6 +502,13 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                         >
                             <span className="material-symbols-outlined text-sm">undo</span>
                             MARCAR COMO NÃO PAGO
+                        </button>
+                        <button
+                            onClick={handleBulkDelete}
+                            className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 rounded-lg text-xs font-black transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-sm">delete</span>
+                            EXCLUIR SELECIONADOS
                         </button>
                         <button
                             onClick={() => setSelectedIds(new Set())}
