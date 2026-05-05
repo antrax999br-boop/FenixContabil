@@ -116,24 +116,30 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
     };
 
     const payableTemplates = Array.from(new Set(
-        (state.payables || []).map(p => p.description)
+        (state.payables || []).map(p => (p.description || '').trim())
     )).filter(Boolean);
 
     const displayPayables = (() => {
         if (monthFilter === 'ALL' || yearFilter === 'ALL') return state.payables || [];
 
         const realPayablesInMonth = (state.payables || []).filter(p => {
-            const date = new Date(p.due_date + 'T12:00:00');
-            return date.getMonth() === monthFilter && date.getFullYear() === (yearFilter as number);
+            if (!p.due_date) return false;
+            const parts = p.due_date.split('-');
+            if (parts.length !== 3) return false;
+            const y = parseInt(parts[0]);
+            const m = parseInt(parts[1]) - 1;
+            return m === monthFilter && y === (yearFilter as number);
         });
 
-        const presentDescriptions = new Set(realPayablesInMonth.map(p => p.description));
+        const presentDescriptions = new Set(
+            realPayablesInMonth.map(p => (p.description || '').trim().toUpperCase())
+        );
 
         const virtualPayables = payableTemplates
-            .filter(desc => !presentDescriptions.has(desc))
+            .filter(desc => !presentDescriptions.has(desc.toUpperCase()))
             .map(desc => {
                 const latest = [...(state.payables || [])]
-                    .filter(p => p.description === desc)
+                    .filter(p => (p.description || '').trim().toUpperCase() === desc.toUpperCase())
                     .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())[0];
 
                 const filterYear = yearFilter as number;
