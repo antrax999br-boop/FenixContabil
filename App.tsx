@@ -555,7 +555,7 @@ const App: React.FC = () => {
     }
   };
 
-  const addPayable = async (payableData: Omit<Payable, 'id' | 'status'> & { installments?: number }) => {
+  const addPayable = async (payableData: Omit<Payable, 'id'> & { installments?: number }) => {
     const installments = payableData.installments || 1;
     const baseDueDate = new Date(payableData.due_date + 'T12:00:00');
     
@@ -574,7 +574,7 @@ const App: React.FC = () => {
           description: desc,
           due_date: dueDate.toISOString().split('T')[0],
           id: crypto.randomUUID(),
-          status: dueDate.toISOString().split('T')[0] < getLocalDateString() ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID,
+          status: payableData.status || (dueDate.toISOString().split('T')[0] < getLocalDateString() ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID),
           created_at: new Date().toISOString()
         };
         // Remove virtual field before saving

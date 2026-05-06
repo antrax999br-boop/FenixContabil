@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 
 interface PayablesPageProps {
     state: AppState;
-    onAdd: (payable: Omit<Payable, 'id' | 'status'> & { installments?: number }) => void;
+    onAdd: (payable: Omit<Payable, 'id'> & { installments?: number }) => void;
     onUpdate: (payable: Payable) => void;
     onPay: (id: string) => void;
     onDelete: (id: string) => void;
@@ -86,7 +86,9 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                     description: p.description,
                     value: p.value,
                     due_date: p.due_date,
-                    prazo: p.prazo
+                    prazo: p.prazo,
+                    is_recurring: true,
+                    status: InvoiceStatus.PAID
                 });
                 // Note: The new record will be NOT_PAID by default in App.tsx
                 // We'd need to call onPay after it's added, but we don't have the new ID yet.
@@ -212,13 +214,21 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                 const filterYear = yearFilter as number;
                 const filterMonth = monthFilter as number;
 
+                // Tentar manter o dia do vencimento original se possível
+                let day = "01";
+                if (latest?.due_date) {
+                    const latestDay = latest.due_date.split('-')[2];
+                    day = latestDay;
+                }
+
                 return {
                     id: `VIRTUAL-PAY-${desc}-${filterYear}-${filterMonth}`,
                     description: desc,
                     value: latest?.value || 0,
-                    due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-01`,
+                    due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-${day}`,
                     prazo: latest?.prazo || '',
                     status: InvoiceStatus.NOT_PAID,
+                    is_recurring: true,
                     payment_date: null
                 } as Payable;
             });
@@ -326,7 +336,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                 ...newPayable
             });
         } else {
-            const { is_installment, installments, status, ...payableData } = newPayable;
+            const { is_installment, installments, ...payableData } = newPayable;
             onAdd({
                 ...payableData,
                 installments: is_installment ? installments : 1
@@ -493,7 +503,9 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                                                 description: p.description,
                                                                 value: p.value,
                                                                 due_date: p.due_date,
-                                                                prazo: p.prazo
+                                                                prazo: p.prazo,
+                                                                is_recurring: true,
+                                                                status: InvoiceStatus.PAID
                                                             });
                                                         } else {
                                                             onPay(p.id);
