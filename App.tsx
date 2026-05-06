@@ -577,9 +577,15 @@ const App: React.FC = () => {
           status: payableData.status || (dueDate.toISOString().split('T')[0] < getLocalDateString() ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID),
           created_at: new Date().toISOString()
         };
-        // Remove virtual field before saving
-        const { installments: _, ...pToSave } = newP as any;
-        newPayables.push(pToSave);
+        // Destructure to only save valid columns to DB
+        const { 
+          description, value, due_date, payment_date, prazo, status, is_recurring 
+        } = newP;
+        
+        newPayables.push({ 
+          id: newP.id, description, value, due_date, payment_date, prazo, status, is_recurring, 
+          created_at: newP.created_at 
+        });
     }
 
     // Try Supabase first
@@ -651,9 +657,17 @@ const App: React.FC = () => {
       updateData.status = updateData.due_date < today ? InvoiceStatus.OVERDUE : InvoiceStatus.NOT_PAID;
     }
 
+    const { 
+      description, value, due_date, payment_date, prazo, status, is_recurring 
+    } = updateData as any;
+
+    const dataToUpdate = {
+      description, value, due_date, payment_date, prazo, status, is_recurring
+    };
+
     const { error } = await supabase
       .from('payables')
-      .update(updateData)
+      .update(dataToUpdate)
       .eq('id', id);
 
     if (error) {
