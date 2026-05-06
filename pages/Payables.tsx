@@ -226,7 +226,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                     description: desc,
                     value: latest?.value || 0,
                     due_date: `${filterYear}-${String(filterMonth + 1).padStart(2, '0')}-${day}`,
-                    prazo: latest?.prazo || '',
+                    prazo: '', // Virtual items start with empty prazo
                     status: InvoiceStatus.NOT_PAID,
                     is_recurring: true,
                     payment_date: null
