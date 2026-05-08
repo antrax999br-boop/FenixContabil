@@ -112,6 +112,16 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
+export const parseCurrencyInput = (value: string | number): number => {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  let cleaned = value.toString().trim();
+  if (cleaned.includes(',')) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  }
+  return parseFloat(cleaned) || 0;
+};
+
 export const formatCNPJ = (cnpj: string): string => {
   return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
 };

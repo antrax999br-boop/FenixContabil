@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Employee, EmployeePayment, EmployeePaymentStatus } from '../types';
-import { formatCurrency } from '../utils/calculations';
+import { formatCurrency, parseCurrencyInput } from '../utils/calculations';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -62,9 +62,9 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         const employeeData = {
             name: newEmployee.name,
             job_title: newEmployee.job_title,
-            salary: parseFloat(newEmployee.salary) || 0,
-            meal_voucher_day: parseFloat(newEmployee.meal_voucher_day) || 0,
-            transport_voucher_day: parseFloat(newEmployee.transport_voucher_day) || 0,
+            salary: parseCurrencyInput(newEmployee.salary),
+            meal_voucher_day: parseCurrencyInput(newEmployee.meal_voucher_day),
+            transport_voucher_day: parseCurrencyInput(newEmployee.transport_voucher_day),
             payment_method: newEmployee.payment_method,
             payment_day: parseInt(newEmployee.payment_day) || 5,
             active: newEmployee.active
