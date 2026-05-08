@@ -50,6 +50,14 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
         e.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const groupedEmployees: Record<number, Employee[]> = {};
+    filteredEmployees.forEach(emp => {
+        const day = emp.payment_day || 5;
+        if (!groupedEmployees[day]) groupedEmployees[day] = [];
+        groupedEmployees[day].push(emp);
+    });
+    const sortedDays = Object.keys(groupedEmployees).map(Number).sort((a, b) => a - b);
+
     const getYearMonthKey = (y: number, m: number) => `${y}.${(m + 1).toString().padStart(2, '0')}`;
     const currentYM = getYearMonthKey(yearFilter, monthFilter);
 
@@ -348,112 +356,121 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filteredEmployees.length > 0 ? filteredEmployees.map(emp => {
-                                const payment = getPaymentForEmployee(emp.id);
-                                const status = payment?.status || EmployeePaymentStatus.PENDING;
-
-                                return (
-                                    <tr key={emp.id} className="hover:bg-slate-50/80 transition-all group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-primary/20">
-                                                    {emp.name.substring(0, 1).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-slate-900">{emp.name}</p>
-                                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{emp.job_title || 'Sem Função'}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-bold">
-                                                Dia {emp.payment_day}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <p className="text-xs font-semibold text-slate-700">{emp.payment_method || 'Não inf.'}</p>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.salary || emp.salary || 0)}</p>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <div>
-                                                    <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.meal_voucher_total || 0)}</p>
-                                                    <p className="text-[10px] text-slate-400 italic">Diário: {formatCurrency(emp.meal_voucher_day)}</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => calculateMonthlyTotals(emp)}
-                                                    className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                                    title="Calcular Total Mensal (22 dias)"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">calculate</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <div>
-                                                    <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.transport_voucher_total || 0)}</p>
-                                                    <p className="text-[10px] text-slate-400 italic">Diário: {formatCurrency(emp.transport_voucher_day)}</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => calculateMonthlyTotals(emp)}
-                                                    className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                                    title="Calcular Total Mensal (22 dias)"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">calculate</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <p className="text-xs font-black text-primary">
-                                                {formatCurrency(
-                                                    (payment?.salary || emp.salary || 0) +
-                                                    (payment?.meal_voucher_total || 0) +
-                                                    (payment?.transport_voucher_total || 0)
-                                                )}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col items-center gap-1">
-                                                <select
-                                                    value={status}
-                                                    onChange={(e) => handleStatusChange(emp.id, e.target.value as EmployeePaymentStatus)}
-                                                    className={`text-[10px] font-black px-3 py-1.5 rounded-full border cursor-pointer outline-none transition-all
-                            ${status === EmployeePaymentStatus.PAID ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                                            status === EmployeePaymentStatus.OVERDUE ? 'bg-rose-100 text-rose-700 border-rose-200' :
-                                                                'bg-amber-100 text-amber-700 border-amber-200'}`}
-                                                >
-                                                    <option value={EmployeePaymentStatus.PENDING}>PENDENTE</option>
-                                                    <option value={EmployeePaymentStatus.PAID}>PAGO</option>
-                                                    <option value={EmployeePaymentStatus.OVERDUE}>ATRASADO</option>
-                                                </select>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                <button
-                                                    onClick={() => openEditModal(emp)}
-                                                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                                                    title="Editar Cadastro"
-                                                >
-                                                    <span className="material-symbols-outlined text-xl">edit_note</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => onDeleteEmployee(emp.id)}
-                                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                                                    title="Excluir"
-                                                >
-                                                    <span className="material-symbols-outlined text-xl">delete</span>
-                                                </button>
-                                            </div>
+                            {sortedDays.length > 0 ? sortedDays.map(day => (
+                                <React.Fragment key={day}>
+                                    <tr className="bg-slate-100/50">
+                                        <td colSpan={9} className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest border-y border-slate-200">
+                                            Pagamentos - Dia {day}
                                         </td>
                                     </tr>
-                                );
-                            }) : (
+                                    {groupedEmployees[day].map(emp => {
+                                        const payment = getPaymentForEmployee(emp.id);
+                                        const status = payment?.status || EmployeePaymentStatus.PENDING;
+
+                                        return (
+                                            <tr key={emp.id} className="hover:bg-slate-50/80 transition-all group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-primary/20">
+                                                            {emp.name.substring(0, 1).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-900">{emp.name}</p>
+                                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{emp.job_title || 'Sem Função'}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-bold">
+                                                        Dia {emp.payment_day}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-xs font-semibold text-slate-700">{emp.payment_method || 'Não inf.'}</p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.salary || emp.salary || 0)}</p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div>
+                                                            <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.meal_voucher_total || 0)}</p>
+                                                            <p className="text-[10px] text-slate-400 italic">Diário: {formatCurrency(emp.meal_voucher_day)}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => calculateMonthlyTotals(emp)}
+                                                            className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                            title="Calcular Total Mensal (22 dias)"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">calculate</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div>
+                                                            <p className="text-xs font-black text-slate-800">{formatCurrency(payment?.transport_voucher_total || 0)}</p>
+                                                            <p className="text-[10px] text-slate-400 italic">Diário: {formatCurrency(emp.transport_voucher_day)}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => calculateMonthlyTotals(emp)}
+                                                            className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                            title="Calcular Total Mensal (22 dias)"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">calculate</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-xs font-black text-primary">
+                                                        {formatCurrency(
+                                                            (payment?.salary || emp.salary || 0) +
+                                                            (payment?.meal_voucher_total || 0) +
+                                                            (payment?.transport_voucher_total || 0)
+                                                        )}
+                                                    </p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <select
+                                                            value={status}
+                                                            onChange={(e) => handleStatusChange(emp.id, e.target.value as EmployeePaymentStatus)}
+                                                            className={`text-[10px] font-black px-3 py-1.5 rounded-full border cursor-pointer outline-none transition-all
+                            ${status === EmployeePaymentStatus.PAID ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                                                    status === EmployeePaymentStatus.OVERDUE ? 'bg-rose-100 text-rose-700 border-rose-200' :
+                                                                        'bg-amber-100 text-amber-700 border-amber-200'}`}
+                                                        >
+                                                            <option value={EmployeePaymentStatus.PENDING}>PENDENTE</option>
+                                                            <option value={EmployeePaymentStatus.PAID}>PAGO</option>
+                                                            <option value={EmployeePaymentStatus.OVERDUE}>ATRASADO</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <button
+                                                            onClick={() => openEditModal(emp)}
+                                                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                                                            title="Editar Cadastro"
+                                                        >
+                                                            <span className="material-symbols-outlined text-xl">edit_note</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onDeleteEmployee(emp.id)}
+                                                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                                            title="Excluir"
+                                                        >
+                                                            <span className="material-symbols-outlined text-xl">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </React.Fragment>
+                            )) : (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-20 text-center">
+                                    <td colSpan={9} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3 text-slate-400">
                                             <span className="material-symbols-outlined text-5xl opacity-20">group_off</span>
                                             <p className="font-semibold italic">Nenhum funcionário encontrado.</p>
