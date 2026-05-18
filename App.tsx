@@ -685,6 +685,35 @@ const App: React.FC = () => {
     }
   };
 
+  const stopRecurrence = async (description: string) => {
+    const descUpper = description.trim().toUpperCase();
+    const matchingIds = state.payables
+      .filter(p => (p.description || '').trim().toUpperCase() === descUpper && p.is_recurring)
+      .map(p => p.id);
+
+    if (matchingIds.length === 0) return;
+
+    const { error } = await supabase
+      .from('payables')
+      .update({ is_recurring: false })
+      .in('id', matchingIds);
+
+    if (!error) {
+      setState(prev => ({
+        ...prev,
+        payables: prev.payables.map(p => matchingIds.includes(p.id) ? { ...p, is_recurring: false } : p)
+      }));
+    } else {
+      console.error('Failed to stop recurrence in DB', error);
+      // Fallback for localStorage if DB fails
+      setState(prev => {
+        const updated = prev.payables.map(p => matchingIds.includes(p.id) ? { ...p, is_recurring: false } : p);
+        localStorage.setItem('fenix_payables', JSON.stringify(updated));
+        return { ...prev, payables: updated };
+      });
+    }
+  };
+
   const addDailyPayment = async (payment: Omit<DailyPayment, 'id' | 'created_at'>) => {
     const { data, error } = await supabase
       .from('daily_payments')
@@ -943,7 +972,7 @@ const App: React.FC = () => {
       case 'notas-sem-nota': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="SEM_NOTA" />;
       case 'notas-internet': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="INTERNET" />;
       case 'notas-aguardando': return <InvoicesPage key={activeTab} state={state} onAdd={addInvoice} onPay={markInvoicePaid} onUpdate={updateInvoice} onDelete={deleteInvoice} initialFilter="AGUARDANDO" />;
-      case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={togglePayablePaid} onUpdate={updatePayable} onDelete={deletePayable} />;
+      case 'contas-pagar': return <PayablesPage state={state} onAdd={addPayable} onPay={togglePayablePaid} onUpdate={updatePayable} onDelete={deletePayable} onStopRecurrence={stopRecurrence} />;
       case 'pagamentos-diarios': return <DailyPaymentsPage dailyPayments={state.dailyPayments} onAdd={addDailyPayment} onUpdate={updateDailyPayment} onDelete={deleteDailyPayment} />;
       case 'controle_cartao':
         return <CreditCardExpensesPage

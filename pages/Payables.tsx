@@ -11,9 +11,10 @@ interface PayablesPageProps {
     onUpdate: (payable: Payable) => void;
     onPay: (id: string) => void;
     onDelete: (id: string) => void;
+    onStopRecurrence?: (description: string) => void;
 }
 
-const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpdate, onDelete }) => {
+const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpdate, onDelete, onStopRecurrence }) => {
     const [showModal, setShowModal] = useState(false);
     const [editingPayable, setEditingPayable] = useState<Payable | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -521,7 +522,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                                         {p.status === InvoiceStatus.PAID ? 'check_circle' : 'radio_button_unchecked'}
                                                     </span>
                                                 </button>
-                                                {!p.id.startsWith('VIRTUAL-') && (
+                                                {!p.id.startsWith('VIRTUAL-') ? (
                                                     <>
                                                         <button
                                                             onClick={() => handleOpenEdit(p)}
@@ -531,13 +532,40 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                                             <span className="material-symbols-outlined text-lg">edit</span>
                                                         </button>
                                                         <button
-                                                            onClick={() => onDelete(p.id)}
+                                                            onClick={() => {
+                                                                if (p.is_recurring) {
+                                                                    if (window.confirm(`Esta é uma despesa fixa. Deseja excluí-la e também parar sua recorrência nos meses futuros?\n\nClique em OK para excluir e parar a recorrência.\nClique em Cancelar para excluir apenas este mês.`)) {
+                                                                        if (onStopRecurrence) onStopRecurrence(p.description);
+                                                                        onDelete(p.id);
+                                                                    } else {
+                                                                        if (window.confirm(`Deseja realmente excluir apenas o lançamento deste mês? (A despesa fixa continuará ativa e voltará a aparecer nos próximos meses)`)) {
+                                                                            onDelete(p.id);
+                                                                        }
+                                                                    }
+                                                                } else {
+                                                                    if (window.confirm(`Deseja realmente excluir o lançamento "${p.description}"?`)) {
+                                                                        onDelete(p.id);
+                                                                    }
+                                                                }
+                                                            }}
                                                             className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
                                                             title="Excluir"
                                                         >
                                                             <span className="material-symbols-outlined text-lg">delete</span>
                                                         </button>
                                                     </>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm(`Deseja encerrar a recorrência da despesa fixa "${p.description}"? Ela não será mais gerada de forma automática nos próximos meses.`)) {
+                                                                if (onStopRecurrence) onStopRecurrence(p.description);
+                                                            }
+                                                        }}
+                                                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                        title="Encerrar Recorrência"
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">delete_forever</span>
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
