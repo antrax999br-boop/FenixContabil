@@ -649,7 +649,12 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                                   return contract?.copan ? `${contract.copan} - ${name}` : name;
                                 })()}
                               </p>
-                              <p className="text-xs text-slate-500">ID: {getDisplayNumber(inv.invoice_number)}</p>
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                <p className="text-xs text-slate-500">ID: {getDisplayNumber(inv.invoice_number)}</p>
+                                {inv.created_by_name && (
+                                  <p className="text-[10px] text-slate-400 font-medium">Cad. por: {inv.created_by_name.split(' ')[0]}</p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>

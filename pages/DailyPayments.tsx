@@ -275,6 +275,9 @@ const DailyPaymentsPage: React.FC<DailyPaymentsPageProps> = ({ dailyPayments, on
                                         </td>
                                         <td className="px-6 py-4 align-top">
                                             <div className="text-sm font-medium text-slate-900">{p.description || '-'}</div>
+                                            {p.created_by_name && (
+                                                <div className="text-[10px] text-slate-400 font-medium mt-1">Cadastrado por: {p.created_by_name.split(' ')[0]}</div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-2 max-w-2xl">

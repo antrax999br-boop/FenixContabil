@@ -463,7 +463,12 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                                 onChange={() => toggleSelection(p.id)}
                                             />
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-semibold text-slate-900">{p.description}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm font-semibold text-slate-900">{p.description}</div>
+                                            {p.created_by_name && (
+                                                <div className="text-[10px] text-slate-400 font-medium mt-1">Cad. por: {p.created_by_name.split(' ')[0]}</div>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 text-sm font-bold text-rose-600">{formatCurrency(p.value)}</td>
                                         <td className="px-6 py-4 text-sm text-slate-600">
                                             {new Date(p.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}

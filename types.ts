@@ -47,6 +47,8 @@ export interface Invoice {
   individual_name?: string;
   is_retirado?: boolean;
   created_at?: string;
+  created_by?: string;
+  created_by_name?: string;
 }
 
 export interface CalendarEvent {
@@ -68,6 +70,8 @@ export interface Payable {
   status: InvoiceStatus;
   is_recurring?: boolean;
   created_at?: string;
+  created_by?: string;
+  created_by_name?: string;
 }
 
 export interface DailyPayment {
@@ -91,6 +95,8 @@ export interface DailyPayment {
   irpf?: string;
   total?: string;
   created_at?: string;
+  created_by?: string;
+  created_by_name?: string;
 }
 
 

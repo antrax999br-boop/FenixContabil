@@ -99,10 +99,10 @@ const App: React.FC = () => {
       // Fetch App Data
       const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes, fenixDebtsRes] = await Promise.all([
         supabase.from('clients').select('*').order('name', { ascending: true }),
-        supabase.from('invoices').select('*'),
+        supabase.from('invoices').select('*, profiles(name)'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
-        supabase.from('payables').select('*'),
-        supabase.from('daily_payments').select('*').order('date', { ascending: false }),
+        supabase.from('payables').select('*, profiles(name)'),
+        supabase.from('daily_payments').select('*, profiles(name)').order('date', { ascending: false }),
         supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }),
         supabase.from('credit_card_payments').select('*'),
         supabase.from('employees').select('*').order('name', { ascending: true }),
@@ -126,13 +126,17 @@ const App: React.FC = () => {
           const localPayables = localStorage.getItem('fenix_payables');
           payables = localPayables ? JSON.parse(localPayables) : [];
         } else {
-          payables = (payablesRes.data || []) as Payable[];
+          payables = (payablesRes.data || []).map((p: any) => ({
+            ...p,
+            created_by_name: p.profiles?.name
+          })) as Payable[];
         }
 
         // Calculate current status for invoices
-        invoices = invoices.map(inv => {
+        invoices = invoices.map((inv: any) => {
           const client = clients.find(c => c.id === inv.client_id);
-          return client ? calculateInvoiceStatusAndValues(inv, client) : inv;
+          const mappedInv = { ...inv, created_by_name: inv.profiles?.name };
+          return client ? calculateInvoiceStatusAndValues(mappedInv, client) : mappedInv;
         });
 
         const events = (eventsRes.data || []).map((e: any) => ({
@@ -162,7 +166,10 @@ const App: React.FC = () => {
           clients: clients,
           invoices: invoices,
           payables: payables,
-          dailyPayments: (dailyPaymentsRes.data || []) as DailyPayment[],
+          dailyPayments: (dailyPaymentsRes.data || []).map((dp: any) => ({
+            ...dp,
+            created_by_name: dp.profiles?.name
+          })) as DailyPayment[],
           creditCardExpenses,
           creditCardPayments,
           employees: (employeesRes?.data || []) as Employee[],
@@ -354,13 +361,15 @@ const App: React.FC = () => {
         interest_value: calculated.interest_value,
         reissue_tax: calculated.reissue_tax,
         postage_tax: calculated.postage_tax,
-        individual_name: invoiceData.individual_name
+        individual_name: invoiceData.individual_name,
+        created_by: state.currentUser?.id
       }])
-      .select()
+      .select('*, profiles(name)')
       .single();
 
     if (data && !error) {
-      setState(prev => ({ ...prev, invoices: [...prev.invoices, data] }));
+      const inserted = { ...data, created_by_name: data.profiles?.name };
+      setState(prev => ({ ...prev, invoices: [...prev.invoices, inserted] }));
     } else if (error) {
       console.error(error);
       alert('Erro ao adicionar boleto: ' + error.message);
@@ -584,20 +593,23 @@ const App: React.FC = () => {
         
         newPayables.push({ 
           id: newP.id, description, value, due_date, payment_date, prazo, status, is_recurring, 
-          created_at: newP.created_at 
+          created_at: newP.created_at,
+          created_by: state.currentUser?.id
         });
     }
 
     // Try Supabase first
-    const { error } = await supabase.from('payables').insert(newPayables);
+    const { data, error } = await supabase.from('payables').insert(newPayables).select('*, profiles(name)');
 
     if (error) {
       console.warn('Failed to save payables to Supabase, saving to localStorage:', error);
-      const updated = [...state.payables, ...newPayables];
+      const newPayablesLocal = newPayables.map(p => ({...p, created_by_name: state.currentUser?.name}));
+      const updated = [...state.payables, ...newPayablesLocal];
       localStorage.setItem('fenix_payables', JSON.stringify(updated));
       setState(prev => ({ ...prev, payables: updated }));
-    } else {
-      setState(prev => ({ ...prev, payables: [...prev.payables, ...newPayables] }));
+    } else if (data) {
+      const inserted = data.map((d: any) => ({ ...d, created_by_name: d.profiles?.name }));
+      setState(prev => ({ ...prev, payables: [...prev.payables, ...inserted] }));
     }
   };
 
@@ -717,12 +729,13 @@ const App: React.FC = () => {
   const addDailyPayment = async (payment: Omit<DailyPayment, 'id' | 'created_at'>) => {
     const { data, error } = await supabase
       .from('daily_payments')
-      .insert([payment])
-      .select()
+      .insert([{ ...payment, created_by: state.currentUser?.id }])
+      .select('*, profiles(name)')
       .single();
 
     if (data && !error) {
-      setState(prev => ({ ...prev, dailyPayments: [data, ...prev.dailyPayments] }));
+      const inserted = { ...data, created_by_name: data.profiles?.name };
+      setState(prev => ({ ...prev, dailyPayments: [inserted, ...prev.dailyPayments] }));
     } else {
       console.error(error);
       alert('Erro ao adicionar lançamento diário.');
