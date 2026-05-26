@@ -750,8 +750,8 @@ const App: React.FC = () => {
         dailyPayments: prev.dailyPayments.filter(p => p.id !== id)
       }));
     } else {
-      console.error(error);
-      alert('Erro ao excluir lançamento diário.');
+      console.error('ERRO AO EXCLUIR:', error);
+      alert(`Erro ao excluir lançamento diário. Detalhe: ${error.message || 'Verifique o console (F12)'}`);
     }
   };
 

@@ -787,13 +787,26 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                                 {!inv.id.startsWith('VIRTUAL-') && (
                                   <button
                                     onClick={() => {
+                                      if (confirm('Deseja excluir este boleto permanentemente?')) {
+                                        onDelete(inv.id);
+                                      }
+                                    }}
+                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                    title="Excluir Boleto"
+                                  >
+                                    <span className="material-symbols-outlined text-lg">delete</span>
+                                  </button>
+                                )}
+                                {!inv.id.startsWith('VIRTUAL-') && (
+                                  <button
+                                    onClick={() => {
                                       if (confirm('Deseja remover este cliente de TODO o checklist mensal? Isso apagará o histórico deste controle para este cliente.')) {
                                         const allRelated = state.invoices.filter(i => i.client_id === inv.client_id && i.invoice_number?.startsWith('AGU-'));
                                         allRelated.forEach(i => onDelete(i.id));
                                       }
                                     }}
-                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                                    title="Remover do Checklist"
+                                    className="p-1.5 text-red-700 hover:bg-red-100 rounded-lg transition-colors"
+                                    title="Remover do Checklist Mensal"
                                   >
                                     <span className="material-symbols-outlined text-lg">delete_sweep</span>
                                   </button>
