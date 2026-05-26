@@ -214,12 +214,12 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       finalNumber = 'AGU-' + (finalNumber || 'PEND');
     }
 
-    if (editingInvoice) {
+    if (editingInvoice && !editingInvoice.id.startsWith('VIRTUAL-')) {
       onUpdate({
         ...editingInvoice,
         client_id: newInvoice.client_id || null,
         invoice_number: finalNumber,
-        original_value: parseFloat(newInvoice.original_value) || 0,
+        original_value: parseFloat(String(newInvoice.original_value).replace(/\./g, '').replace(',', '.')) || 0,
         due_date: newInvoice.due_date,
         status: newInvoice.status,
         individual_name: newInvoice.individual_name,
@@ -229,7 +229,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     } else {
       onAdd({
         ...newInvoice,
-        original_value: parseFloat(newInvoice.original_value) || 0,
+        original_value: parseFloat(String(newInvoice.original_value).replace(/\./g, '').replace(',', '.')) || 0,
         invoice_number: finalNumber,
       } as any);
     }
@@ -752,16 +752,14 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                           <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             {(!inv.id.startsWith('VIRTUAL-') || inv.id.startsWith('VIRTUAL-INT-')) && (
                               <>
-                                {!inv.id.startsWith('VIRTUAL-') && (
-                                  <button
-                                    onClick={() => openEditModal(inv)}
-                                    className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                    title="Editar"
-                                  >
-                                    <span className="material-symbols-outlined text-lg">edit</span>
-                                  </button>
-                                )}
-                                {!isAguardando && inv.status !== InvoiceStatus.PAID && (
+                                <button
+                                  onClick={() => openEditModal(inv)}
+                                  className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Editar"
+                                >
+                                  <span className="material-symbols-outlined text-lg">edit</span>
+                                </button>
+                                {!isAguardando && (
                                   <button
                                     onClick={() => {
                                       if (inv.id.startsWith('VIRTUAL-')) {
@@ -775,13 +773,19 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                                           status: InvoiceStatus.PAID
                                         } as any);
                                       } else {
-                                        onPay(inv.id);
+                                        onUpdate({
+                                          ...inv,
+                                          status: inv.status === InvoiceStatus.PAID ? InvoiceStatus.NOT_PAID : InvoiceStatus.PAID,
+                                          payment_date: inv.status === InvoiceStatus.PAID ? null : new Date().toISOString().split('T')[0]
+                                        });
                                       }
                                     }}
-                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                    title="Marcar como Pago"
+                                    className={`p-1.5 rounded-lg transition-colors ${inv.status === InvoiceStatus.PAID ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                                    title={inv.status === InvoiceStatus.PAID ? "Marcar como Pendente" : "Marcar como Pago"}
                                   >
-                                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                                    <span className="material-symbols-outlined text-lg">
+                                      {inv.status === InvoiceStatus.PAID ? 'history' : 'check_circle'}
+                                    </span>
                                   </button>
                                 )}
                                 {!inv.id.startsWith('VIRTUAL-') && (
