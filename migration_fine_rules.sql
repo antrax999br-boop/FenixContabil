@@ -60,9 +60,22 @@ BEGIN
     biz_days_late := public.count_business_days(inv.due_date, current_date_val);
     calendar_days_late := current_date_val - inv.due_date;
     
+    -- Se o vencimento é hoje ou no futuro, garante status NAO_PAGO e zera taxas/multas
+    IF calendar_days_late <= 0 THEN
+      UPDATE public.invoices
+      SET status = 'NAO_PAGO',
+          penalty_applied = FALSE,
+          fine_value = 0,
+          interest_value = 0,
+          reissue_tax = 0,
+          postage_tax = 0,
+          days_overdue = 0,
+          final_value = inv.original_value
+      WHERE id = inv.id;
+      
     -- Condition to apply initial charges: 
     -- At least 5 business days late
-    IF biz_days_late >= 5 THEN
+    ELSIF biz_days_late >= 5 THEN
       
       -- Calculate weekly fee (R$ 5.00 per 7 days of delay)
       weeks_late := floor(calendar_days_late / 7);

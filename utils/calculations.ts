@@ -47,6 +47,20 @@ export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client
   const businessDaysLate = countBusinessDays(dueDate, today);
   const calendarDaysLate = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
+  if (calendarDaysLate <= 0) {
+    return {
+      ...invoice,
+      status: InvoiceStatus.NOT_PAID,
+      days_overdue: 0,
+      penalty_applied: false,
+      fine_value: 0,
+      interest_value: 0,
+      reissue_tax: 0,
+      postage_tax: 0,
+      final_value: invoice.original_value
+    };
+  }
+
   // Minimum 1 week fee as soon as charges apply, then +5 every 7 days
   const weeksLate = Math.max(1, Math.floor(calendarDaysLate / 7));
   const postageTax = weeksLate * 5.00;
