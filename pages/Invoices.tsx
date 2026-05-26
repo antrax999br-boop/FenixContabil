@@ -56,7 +56,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
         return isInternet;
       })
       .map(inv => inv.individual_name)
-  )).filter(Boolean) as string[];
+  )).filter(name => name && !name.includes('(Inativo)')) as string[];
 
   const displayInvoices = (() => {
     if (monthFilter === 'ALL' || yearFilter === 'ALL') return state.invoices;
@@ -801,16 +801,23 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                                     <span className="material-symbols-outlined text-lg">delete</span>
                                   </button>
                                 )}
-                                {!inv.id.startsWith('VIRTUAL-') && (
+                                {(isAguardando || isInternet) && (
                                   <button
                                     onClick={() => {
-                                      if (confirm('Deseja remover este cliente de TODO o checklist mensal? Isso apagará o histórico deste controle para este cliente.')) {
-                                        const allRelated = state.invoices.filter(i => i.client_id === inv.client_id && i.invoice_number?.startsWith('AGU-'));
-                                        allRelated.forEach(i => onDelete(i.id));
+                                      if (isInternet) {
+                                        if (confirm('Deseja PARAR de gerar essa despesa nos próximos meses? (O histórico antigo será mantido como inativo)')) {
+                                          const allRelated = state.invoices.filter(i => i.individual_name === inv.individual_name && !i.id.startsWith('VIRTUAL-') && (i.invoice_number?.startsWith('INT-') || !i.client_id));
+                                          allRelated.forEach(i => onUpdate({...i, individual_name: i.individual_name + ' (Inativo)'}));
+                                        }
+                                      } else {
+                                        if (confirm('Deseja remover este cliente de TODO o checklist mensal? Isso apagará o histórico deste controle para este cliente.')) {
+                                          const allRelated = state.invoices.filter(i => i.client_id === inv.client_id && i.invoice_number?.startsWith('AGU-') && !i.id.startsWith('VIRTUAL-'));
+                                          allRelated.forEach(i => onDelete(i.id));
+                                        }
                                       }
                                     }}
                                     className="p-1.5 text-red-700 hover:bg-red-100 rounded-lg transition-colors"
-                                    title="Remover do Checklist Mensal"
+                                    title="Remover do Checklist Mensal (Parar Recorrência)"
                                   >
                                     <span className="material-symbols-outlined text-lg">delete_sweep</span>
                                   </button>
