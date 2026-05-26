@@ -395,6 +395,20 @@ const App: React.FC = () => {
   const updateInvoice = async (invoice: Invoice) => {
     const { id, created_at, created_by_name, profiles, ...updateData } = invoice as any;
     if (updateData.client_id === '') updateData.client_id = null;
+
+    const client = updateData.client_id ? state.clients.find(c => c.id === updateData.client_id) : undefined;
+    if (client) {
+      const calculated = calculateInvoiceStatusAndValues(updateData as any, client);
+      updateData.final_value = calculated.final_value;
+      updateData.status = calculated.status;
+      updateData.days_overdue = calculated.days_overdue;
+      updateData.penalty_applied = calculated.penalty_applied;
+      updateData.fine_value = calculated.fine_value;
+      updateData.interest_value = calculated.interest_value;
+    } else {
+      updateData.final_value = updateData.original_value;
+    }
+
     const { data, error } = await supabase
       .from('invoices')
       .update(updateData)
@@ -404,7 +418,9 @@ const App: React.FC = () => {
 
     if (data && !error) {
       const client = state.clients.find(c => c.id === data.client_id);
-      const updated = client ? calculateInvoiceStatusAndValues(data, client) : data;
+      const updated = client 
+        ? calculateInvoiceStatusAndValues(data, client) 
+        : { ...data, final_value: data.original_value };
 
       setState(prev => ({
         ...prev,
