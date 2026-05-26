@@ -393,7 +393,7 @@ const App: React.FC = () => {
   };
 
   const updateInvoice = async (invoice: Invoice) => {
-    const { id, created_at, ...updateData } = invoice;
+    const { id, created_at, created_by_name, profiles, ...updateData } = invoice as any;
     if (updateData.client_id === '') updateData.client_id = null;
     const { data, error } = await supabase
       .from('invoices')
@@ -661,7 +661,7 @@ const App: React.FC = () => {
   };
 
   const updatePayable = async (payable: Payable) => {
-    const { id, created_at, ...updateData } = payable;
+    const { id, created_at, created_by_name, profiles, ...updateData } = payable as any;
 
     // Auto-status update logic
     const today = getLocalDateString();
@@ -758,7 +758,7 @@ const App: React.FC = () => {
   const updateDailyPayment = async (payment: DailyPayment) => {
     // We send the whole object except internal supabase fields if necessary, 
     // but supabase.update() with the object is fine.
-    const { id, created_at, ...updateData } = payment;
+    const { id, created_at, created_by_name, profiles, ...updateData } = payment as any;
     const { error } = await supabase
       .from('daily_payments')
       .update(updateData)
