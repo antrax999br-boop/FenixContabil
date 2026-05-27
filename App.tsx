@@ -609,8 +609,7 @@ const App: React.FC = () => {
         
         newPayables.push({ 
           id: newP.id, description, value, due_date, payment_date, prazo, status, is_recurring, 
-          created_at: newP.created_at,
-          created_by: state.currentUser?.id
+          created_at: newP.created_at
         });
     }
 
