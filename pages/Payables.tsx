@@ -17,6 +17,7 @@ interface PayablesPageProps {
 const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpdate, onDelete, onStopRecurrence }) => {
     const [showModal, setShowModal] = useState(false);
     const [editingPayable, setEditingPayable] = useState<Payable | null>(null);
+    const [inputValue, setInputValue] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [monthFilter, setMonthFilter] = useState<number | 'ALL'>(new Date().getMonth());
     const [yearFilter, setYearFilter] = useState<number | 'ALL'>(new Date().getFullYear());
@@ -52,6 +53,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
             is_installment: false,
             installments: 1
         });
+        setInputValue(new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(payable.value || 0));
         setShowModal(true);
     };
 
@@ -171,6 +173,7 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingPayable(null);
+        setInputValue('');
         setNewPayable({
             description: '',
             value: 0,
@@ -331,13 +334,19 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         e.preventDefault();
         if (!newPayable.description) return alert('Insira uma descrição');
 
+        let cleaned = inputValue.replace(/\./g, '').replace(',', '.');
+        cleaned = cleaned.replace(/[^0-9.-]/g, '');
+        const finalValue = parseFloat(cleaned) || 0;
+
+        const submitPayable = { ...newPayable, value: finalValue };
+
         if (editingPayable) {
             onUpdate({
                 ...editingPayable,
-                ...newPayable
+                ...submitPayable
             });
         } else {
-            const { is_installment, installments, ...payableData } = newPayable;
+            const { is_installment, installments, ...payableData } = submitPayable;
             onAdd({
                 ...payableData,
                 installments: is_installment ? installments : 1
@@ -375,7 +384,10 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                         Exportar PDF
                     </button>
                     <button
-                        onClick={() => setShowModal(true)}
+                        onClick={() => {
+                            setInputValue('');
+                            setShowModal(true);
+                        }}
                         className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-semibold hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
                     >
                         <span className="material-symbols-outlined text-sm">add</span>
@@ -653,11 +665,17 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                     <label className="block text-xs font-black text-slate-500 uppercase mb-1">Valor (R$)</label>
                                     <input
                                         required
-                                        className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-rose-500/20"
-                                        type="number"
-                                        step="0.01"
-                                        value={newPayable.value}
-                                        onChange={e => setNewPayable({ ...newPayable, value: parseFloat(e.target.value) })}
+                                        className="w-full px-4 py-2 bg-slate-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-rose-500/20 text-right font-black text-rose-600"
+                                        type="text"
+                                        placeholder="0,00"
+                                        value={inputValue}
+                                        onChange={e => setInputValue(e.target.value)}
+                                        onBlur={() => {
+                                            let cleaned = inputValue.replace(/\./g, '').replace(',', '.');
+                                            cleaned = cleaned.replace(/[^0-9.-]/g, '');
+                                            const num = parseFloat(cleaned) || 0;
+                                            setInputValue(num > 0 ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num) : '');
+                                        }}
                                     />
                                 </div>
                                 <div>
