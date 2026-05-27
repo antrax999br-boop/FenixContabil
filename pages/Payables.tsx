@@ -341,10 +341,18 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
         const submitPayable = { ...newPayable, value: finalValue };
 
         if (editingPayable) {
-            onUpdate({
-                ...editingPayable,
-                ...submitPayable
-            });
+            if (editingPayable.id.startsWith('VIRTUAL-')) {
+                const { is_installment, installments, ...payableData } = submitPayable;
+                onAdd({
+                    ...payableData,
+                    installments: 1
+                });
+            } else {
+                onUpdate({
+                    ...editingPayable,
+                    ...submitPayable
+                });
+            }
         } else {
             const { is_installment, installments, ...payableData } = submitPayable;
             onAdd({
@@ -572,17 +580,26 @@ const PayablesPage: React.FC<PayablesPageProps> = ({ state, onAdd, onPay, onUpda
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <button
-                                                        onClick={() => {
-                                                            if (window.confirm(`Deseja encerrar a recorrência da despesa fixa "${p.description}"? Ela não será mais gerada de forma automática nos próximos meses.`)) {
-                                                                if (onStopRecurrence) onStopRecurrence(p.description);
-                                                            }
-                                                        }}
-                                                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                                                        title="Encerrar Recorrência"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">delete_forever</span>
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleOpenEdit(p)}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Editar (Criará um registro real para este mês)"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">edit</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (window.confirm(`Deseja encerrar a recorrência da despesa fixa "${p.description}"? Ela não será mais gerada de forma automática nos próximos meses.`)) {
+                                                                    if (onStopRecurrence) onStopRecurrence(p.description);
+                                                                }
+                                                            }}
+                                                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                            title="Encerrar Recorrência"
+                                                        >
+                                                            <span className="material-symbols-outlined text-lg">delete_forever</span>
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         </td>
