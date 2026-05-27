@@ -101,7 +101,7 @@ const App: React.FC = () => {
         supabase.from('clients').select('*').order('name', { ascending: true }),
         supabase.from('invoices').select('*, profiles(name)'),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
-        supabase.from('payables').select('*, profiles(name)'),
+        supabase.from('payables').select('*').limit(10000),
         supabase.from('daily_payments').select('*, profiles(name)').order('date', { ascending: false }),
         supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }),
         supabase.from('credit_card_payments').select('*'),
@@ -615,7 +615,7 @@ const App: React.FC = () => {
     }
 
     // Try Supabase first
-    const { data, error } = await supabase.from('payables').insert(newPayables).select('*, profiles(name)');
+    const { data, error } = await supabase.from('payables').insert(newPayables).select();
 
     if (error) {
       console.warn('Failed to save payables to Supabase, saving to localStorage:', error);
