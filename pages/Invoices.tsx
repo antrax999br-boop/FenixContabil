@@ -161,9 +161,32 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       matchesStatus = i.status === filter;
     }
 
-    const invoiceDate = new Date(i.due_date + 'T12:00:00');
-    const matchesMonth = monthFilter === 'ALL' || invoiceDate.getMonth() === monthFilter;
-    const matchesYear = yearFilter === 'ALL' || invoiceDate.getFullYear() === yearFilter;
+    const getReferenceDate = (inv: Invoice) => {
+      const isAg = inv.invoice_number?.startsWith('AGU-');
+      const isInt = !isAg && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
+      const isSN = !isAg && !isInt && (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
+      const isStd = !isAg && !isInt && !isSN;
+
+      const [dueYear, dueMonth] = (inv.due_date || '').split('-').map(Number);
+      let refMonth = dueMonth - 1;
+      let refYear = dueYear;
+
+      if (isStd && inv.invoice_number) {
+        const prefixes = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+        const upper = inv.invoice_number.toUpperCase();
+        for (let i = 0; i < prefixes.length; i++) {
+          if (upper.startsWith(prefixes[i])) {
+            refMonth = i;
+            break;
+          }
+        }
+      }
+      return { month: refMonth, year: refYear };
+    };
+
+    const ref = getReferenceDate(i);
+    const matchesMonth = monthFilter === 'ALL' || ref.month === monthFilter;
+    const matchesYear = yearFilter === 'ALL' || ref.year === yearFilter;
 
     const searchLower = searchTerm.toLowerCase();
     const clientName = client?.name || i.individual_name || '';
@@ -179,8 +202,25 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
   });
 
   const groupedInvoices = filteredInvoices.reduce((acc: Record<number, Invoice[]>, inv: Invoice) => {
-    // Safer month extraction from YYYY-MM-DD string
-    const month = parseInt(inv.due_date.split('-')[1]) - 1;
+    const isAg = inv.invoice_number?.startsWith('AGU-');
+    const isInt = !isAg && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
+    const isSN = !isAg && !isInt && (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
+    const isStd = !isAg && !isInt && !isSN;
+
+    const [dueYear, dueMonth] = (inv.due_date || '').split('-').map(Number);
+    let month = dueMonth - 1;
+
+    if (isStd && inv.invoice_number) {
+      const prefixes = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+      const upper = inv.invoice_number.toUpperCase();
+      for (let i = 0; i < prefixes.length; i++) {
+        if (upper.startsWith(prefixes[i])) {
+          month = i;
+          break;
+        }
+      }
+    }
+
     if (!acc[month]) acc[month] = [];
     acc[month].push(inv);
     return acc;
