@@ -96,7 +96,6 @@ const App: React.FC = () => {
         .eq('id', userId)
         .single();
 
-      // Fetch App Data
       // Helper para buscar todos os itens contornando o limite de 1.000 do Supabase
       const fetchAllRows = async (table: string, selectQuery: string, orderCol?: string, ascending = false) => {
         let allData: any[] = [];
@@ -105,7 +104,12 @@ const App: React.FC = () => {
         
         while (true) {
           let query = supabase.from(table).select(selectQuery).range(from, from + step - 1);
-          if (orderCol) query = query.order(orderCol, { ascending });
+          
+          if (orderCol) {
+            query = query.order(orderCol, { ascending }).order('id', { ascending: true });
+          } else {
+            query = query.order('id', { ascending: true });
+          }
           
           const { data, error } = await query;
           if (error) return { data: allData, error };
