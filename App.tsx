@@ -99,9 +99,9 @@ const App: React.FC = () => {
       // Fetch App Data
       const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes, fenixDebtsRes] = await Promise.all([
         supabase.from('clients').select('*').order('name', { ascending: true }),
-        supabase.from('invoices').select('*, profiles(name)').limit(10000),
+        supabase.from('invoices').select('*, profiles(name)').order('due_date', { ascending: false }).limit(50000),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
-        supabase.from('payables').select('*').limit(10000),
+        supabase.from('payables').select('*').order('due_date', { ascending: false }).limit(50000),
         supabase.from('daily_payments').select('*, profiles(name)').order('date', { ascending: false }),
         supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }),
         supabase.from('credit_card_payments').select('*'),
