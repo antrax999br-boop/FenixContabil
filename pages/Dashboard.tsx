@@ -13,15 +13,16 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
   const currentMonth = viewDate.getMonth();
   const currentYear = viewDate.getFullYear();
 
-  const isInSelectedMonth = (dateStr: string) => {
-    if (!dateStr) return false;
+  const isInSelectedMonth = (inv: typeof state.invoices[0]) => {
+    const targetDateStr = inv.created_at ? inv.created_at.split('T')[0] : inv.due_date;
+    if (!targetDateStr) return false;
     // Robust parsing of YYYY-MM-DD
-    const [year, month] = dateStr.split('-').map(Number);
+    const [year, month] = targetDateStr.split('-').map(Number);
     return (month - 1) === currentMonth && year === currentYear;
   };
 
   // Harmonized filters to match Invoices.tsx
-  const allSelectedMonthInvoices = state.invoices.filter(i => isInSelectedMonth(i.due_date));
+  const allSelectedMonthInvoices = state.invoices.filter(i => isInSelectedMonth(i));
 
   const selectedMonthInvoices = allSelectedMonthInvoices.filter(i => {
     const isAguardando = i.invoice_number?.startsWith('AGU-');

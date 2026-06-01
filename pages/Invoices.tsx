@@ -161,7 +161,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       matchesStatus = i.status === filter;
     }
 
-    const invoiceDate = new Date(i.due_date + 'T12:00:00');
+    const targetDateStr = i.created_at ? i.created_at.split('T')[0] : i.due_date;
+    const invoiceDate = new Date(targetDateStr + 'T12:00:00');
     const matchesMonth = monthFilter === 'ALL' || invoiceDate.getMonth() === monthFilter;
     const matchesYear = yearFilter === 'ALL' || invoiceDate.getFullYear() === yearFilter;
 
@@ -180,7 +181,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
 
   const groupedInvoices = filteredInvoices.reduce((acc: Record<number, Invoice[]>, inv: Invoice) => {
     // Safer month extraction from YYYY-MM-DD string
-    const month = parseInt(inv.due_date.split('-')[1]) - 1;
+    const targetDateStr = inv.created_at ? inv.created_at.split('T')[0] : inv.due_date;
+    const month = parseInt(targetDateStr.split('-')[1]) - 1;
     if (!acc[month]) acc[month] = [];
     acc[month].push(inv);
     return acc;
