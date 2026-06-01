@@ -368,7 +368,11 @@ const App: React.FC = () => {
       .single();
 
     if (data && !error) {
-      const inserted = { ...data, created_by_name: data.profiles?.name };
+      const insertedData = { ...data, created_by_name: data.profiles?.name };
+      const inserted = client 
+        ? calculateInvoiceStatusAndValues(insertedData, client) 
+        : { ...insertedData, final_value: insertedData.original_value };
+
       setState(prev => ({ ...prev, invoices: [...prev.invoices, inserted] }));
     } else if (error) {
       console.error(error);
