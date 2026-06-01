@@ -98,21 +98,21 @@ const App: React.FC = () => {
 
       // Fetch App Data
       const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes, fenixDebtsRes] = await Promise.all([
-        supabase.from('clients').select('*').order('name', { ascending: true }),
+        supabase.from('clients').select('*').order('name', { ascending: true }).limit(50000),
         supabase.from('invoices').select('*, profiles(name)').order('due_date', { ascending: false }).limit(50000),
-        supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
+        supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)').limit(50000),
         supabase.from('payables').select('*').order('due_date', { ascending: false }).limit(50000),
-        supabase.from('daily_payments').select('*, profiles(name)').order('date', { ascending: false }),
-        supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }),
-        supabase.from('credit_card_payments').select('*'),
-        supabase.from('employees').select('*').order('name', { ascending: true }),
-        supabase.from('employee_payments').select('*'),
-        supabase.from('contracts').select('*'),
-        supabase.from('future_entries').select('*').order('date', { ascending: false }),
-        supabase.from('fenix_loans').select('*').order('date', { ascending: false }),
-        supabase.from('bank_fees').select('*').order('date', { ascending: false }),
-        supabase.from('irpf_receipts').select('*').order('date', { ascending: false }),
-        supabase.from('fenix_debts').select('*').order('date', { ascending: false })
+        supabase.from('daily_payments').select('*, profiles(name)').order('date', { ascending: false }).limit(50000),
+        supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }).limit(50000),
+        supabase.from('credit_card_payments').select('*').limit(50000),
+        supabase.from('employees').select('*').order('name', { ascending: true }).limit(50000),
+        supabase.from('employee_payments').select('*').limit(50000),
+        supabase.from('contracts').select('*').limit(50000),
+        supabase.from('future_entries').select('*').order('date', { ascending: false }).limit(50000),
+        supabase.from('fenix_loans').select('*').order('date', { ascending: false }).limit(50000),
+        supabase.from('bank_fees').select('*').order('date', { ascending: false }).limit(50000),
+        supabase.from('irpf_receipts').select('*').order('date', { ascending: false }).limit(50000),
+        supabase.from('fenix_debts').select('*').order('date', { ascending: false }).limit(50000)
       ]);
 
       if (profile) {
