@@ -97,22 +97,42 @@ const App: React.FC = () => {
         .single();
 
       // Fetch App Data
+      // Helper para buscar todos os itens contornando o limite de 1.000 do Supabase
+      const fetchAllRows = async (table: string, selectQuery: string, orderCol?: string, ascending = false) => {
+        let allData: any[] = [];
+        let from = 0;
+        const step = 1000;
+        
+        while (true) {
+          let query = supabase.from(table).select(selectQuery).range(from, from + step - 1);
+          if (orderCol) query = query.order(orderCol, { ascending });
+          
+          const { data, error } = await query;
+          if (error) return { data: allData, error };
+          
+          if (data && data.length > 0) allData = allData.concat(data);
+          if (!data || data.length < step) break;
+          from += step;
+        }
+        return { data: allData, error: null };
+      };
+
       const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes, fenixDebtsRes] = await Promise.all([
-        supabase.from('clients').select('*').order('name', { ascending: true }).limit(50000),
-        supabase.from('invoices').select('*, profiles(name)').order('due_date', { ascending: false }).limit(50000),
-        supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)').limit(50000),
-        supabase.from('payables').select('*').order('due_date', { ascending: false }).limit(50000),
-        supabase.from('daily_payments').select('*, profiles(name)').order('date', { ascending: false }).limit(50000),
-        supabase.from('credit_card_expenses').select('*').order('purchase_date', { ascending: false }).limit(50000),
-        supabase.from('credit_card_payments').select('*').limit(50000),
-        supabase.from('employees').select('*').order('name', { ascending: true }).limit(50000),
-        supabase.from('employee_payments').select('*').limit(50000),
-        supabase.from('contracts').select('*').limit(50000),
-        supabase.from('future_entries').select('*').order('date', { ascending: false }).limit(50000),
-        supabase.from('fenix_loans').select('*').order('date', { ascending: false }).limit(50000),
-        supabase.from('bank_fees').select('*').order('date', { ascending: false }).limit(50000),
-        supabase.from('irpf_receipts').select('*').order('date', { ascending: false }).limit(50000),
-        supabase.from('fenix_debts').select('*').order('date', { ascending: false }).limit(50000)
+        fetchAllRows('clients', '*', 'name', true),
+        fetchAllRows('invoices', '*, profiles(name)', 'due_date', false),
+        fetchAllRows('calendar_events', 'id, title, description, event_date, event_time, created_by, profiles(name)'),
+        fetchAllRows('payables', '*', 'due_date', false),
+        fetchAllRows('daily_payments', '*, profiles(name)', 'date', false),
+        fetchAllRows('credit_card_expenses', '*', 'purchase_date', false),
+        fetchAllRows('credit_card_payments', '*'),
+        fetchAllRows('employees', '*', 'name', true),
+        fetchAllRows('employee_payments', '*'),
+        fetchAllRows('contracts', '*'),
+        fetchAllRows('future_entries', '*', 'date', false),
+        fetchAllRows('fenix_loans', '*', 'date', false),
+        fetchAllRows('bank_fees', '*', 'date', false),
+        fetchAllRows('irpf_receipts', '*', 'date', false),
+        fetchAllRows('fenix_debts', '*', 'date', false)
       ]);
 
       if (profile) {
