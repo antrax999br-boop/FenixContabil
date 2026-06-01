@@ -99,7 +99,7 @@ const App: React.FC = () => {
       // Fetch App Data
       const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes, fenixDebtsRes] = await Promise.all([
         supabase.from('clients').select('*').order('name', { ascending: true }),
-        supabase.from('invoices').select('*, profiles(name)'),
+        supabase.from('invoices').select('*, profiles(name)').limit(10000),
         supabase.from('calendar_events').select('id, title, description, event_date, event_time, created_by, profiles(name)'),
         supabase.from('payables').select('*').limit(10000),
         supabase.from('daily_payments').select('*, profiles(name)').order('date', { ascending: false }),
