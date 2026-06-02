@@ -13,37 +13,15 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onTabChange }) => {
   const currentMonth = viewDate.getMonth();
   const currentYear = viewDate.getFullYear();
 
-  const getReferenceDate = (inv: typeof state.invoices[0]) => {
-    const isAguardando = inv.invoice_number?.startsWith('AGU-');
-    const isInternet = !isAguardando && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
-    const isSemNota = !isAguardando && !isInternet && (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
-    const isStandard = !isAguardando && !isInternet && !isSemNota;
-
-    const [dueYear, dueMonth] = (inv.due_date || '').split('-').map(Number);
-    let refMonth = dueMonth - 1;
-    let refYear = dueYear;
-
-    if (isStandard && inv.invoice_number) {
-      const prefixes = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-      const upper = inv.invoice_number.toUpperCase();
-      for (let i = 0; i < prefixes.length; i++) {
-        if (upper.startsWith(prefixes[i])) {
-          refMonth = i;
-          break;
-        }
-      }
-    }
-    return { month: refMonth, year: refYear };
-  };
-
-  const isInSelectedMonth = (inv: typeof state.invoices[0]) => {
-    if (!inv.due_date) return false;
-    const ref = getReferenceDate(inv);
-    return ref.month === currentMonth && ref.year === currentYear;
+  const isInSelectedMonth = (dateStr: string) => {
+    if (!dateStr) return false;
+    // Robust parsing of YYYY-MM-DD
+    const [year, month] = dateStr.split('-').map(Number);
+    return (month - 1) === currentMonth && year === currentYear;
   };
 
   // Harmonized filters to match Invoices.tsx
-  const allSelectedMonthInvoices = state.invoices.filter(i => isInSelectedMonth(i));
+  const allSelectedMonthInvoices = state.invoices.filter(i => isInSelectedMonth(i.due_date));
 
   const selectedMonthInvoices = allSelectedMonthInvoices.filter(i => {
     const isAguardando = i.invoice_number?.startsWith('AGU-');

@@ -138,7 +138,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
 
     const isAguardando = i.invoice_number?.startsWith('AGU-');
     const isInternet = !isAguardando && (i.invoice_number?.startsWith('INT-') || (i.individual_name && !i.client_id));
-    const isSemNota = !isAguardando && !isInternet && (i.invoice_number?.startsWith('SN-') || !i.invoice_number || i.invoice_number.trim() === '' || i.invoice_number.toUpperCase() === 'S/N' || i.invoice_number.toUpperCase() === 'S/AN');
+    const isSemNota = !isAguardando && !isInternet && i.invoice_number?.startsWith('SN-');
     const isStandard = !isAguardando && !isInternet && !isSemNota;
 
     // Isolar Boletos Internet
@@ -161,32 +161,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       matchesStatus = i.status === filter;
     }
 
-    const getReferenceDate = (inv: Invoice) => {
-      const isAg = inv.invoice_number?.startsWith('AGU-');
-      const isInt = !isAg && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
-      const isSN = !isAg && !isInt && (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
-      const isStd = !isAg && !isInt && !isSN;
-
-      const [dueYear, dueMonth] = (inv.due_date || '').split('-').map(Number);
-      let refMonth = dueMonth - 1;
-      let refYear = dueYear;
-
-      if (isStd && inv.invoice_number) {
-        const prefixes = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-        const upper = inv.invoice_number.toUpperCase();
-        for (let i = 0; i < prefixes.length; i++) {
-          if (upper.startsWith(prefixes[i])) {
-            refMonth = i;
-            break;
-          }
-        }
-      }
-      return { month: refMonth, year: refYear };
-    };
-
-    const ref = getReferenceDate(i);
-    const matchesMonth = monthFilter === 'ALL' || ref.month === monthFilter;
-    const matchesYear = yearFilter === 'ALL' || ref.year === yearFilter;
+    const invoiceDate = new Date(i.due_date + 'T12:00:00');
+    const matchesMonth = monthFilter === 'ALL' || invoiceDate.getMonth() === monthFilter;
+    const matchesYear = yearFilter === 'ALL' || invoiceDate.getFullYear() === yearFilter;
 
     const searchLower = searchTerm.toLowerCase();
     const clientName = client?.name || i.individual_name || '';
@@ -202,25 +179,8 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
   });
 
   const groupedInvoices = filteredInvoices.reduce((acc: Record<number, Invoice[]>, inv: Invoice) => {
-    const isAg = inv.invoice_number?.startsWith('AGU-');
-    const isInt = !isAg && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
-    const isSN = !isAg && !isInt && (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
-    const isStd = !isAg && !isInt && !isSN;
-
-    const [dueYear, dueMonth] = (inv.due_date || '').split('-').map(Number);
-    let month = dueMonth - 1;
-
-    if (isStd && inv.invoice_number) {
-      const prefixes = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-      const upper = inv.invoice_number.toUpperCase();
-      for (let i = 0; i < prefixes.length; i++) {
-        if (upper.startsWith(prefixes[i])) {
-          month = i;
-          break;
-        }
-      }
-    }
-
+    // Safer month extraction from YYYY-MM-DD string
+    const month = parseInt(inv.due_date.split('-')[1]) - 1;
     if (!acc[month]) acc[month] = [];
     acc[month].push(inv);
     return acc;
@@ -291,7 +251,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     let type: 'STANDARD' | 'INTERNET' | 'SEM_NOTA' | 'AGUARDANDO' = 'STANDARD';
     if (inv.invoice_number?.startsWith('AGU-')) type = 'AGUARDANDO';
     else if (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id)) type = 'INTERNET';
-    else if (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN') type = 'SEM_NOTA';
+    else if (inv.invoice_number?.startsWith('SN-')) type = 'SEM_NOTA';
 
     setRegType(type);
     setNewInvoice({
@@ -670,7 +630,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                     const client = state.clients.find(c => c.id === inv.client_id);
                     const isAguardando = inv.invoice_number?.startsWith('AGU-');
                     const isInternet = !isAguardando && (inv.invoice_number?.startsWith('INT-') || (inv.individual_name && !inv.client_id));
-                    const isSemNota = !isAguardando && !isInternet && (inv.invoice_number?.startsWith('SN-') || !inv.invoice_number || inv.invoice_number.trim() === '' || inv.invoice_number.toUpperCase() === 'S/N' || inv.invoice_number.toUpperCase() === 'S/AN');
+                    const isSemNota = !isAguardando && !isInternet && inv.invoice_number?.startsWith('SN-');
                     const isStandard = !isAguardando && !isInternet && !isSemNota;
 
                     return (
