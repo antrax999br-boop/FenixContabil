@@ -24,6 +24,8 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
     const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().slice(0, 7).replace('-', '.')); // AAAA.MM
     const [showModal, setShowModal] = useState(false);
     const [editingExpense, setEditingExpense] = useState<CreditCardExpense | null>(null);
+    const [filterCard, setFilterCard] = useState<string>('Todos');
+    const [filterStatus, setFilterStatus] = useState<string>('Todos');
 
     const [formData, setFormData] = useState<Omit<CreditCardExpense, 'id' | 'created_at'>>({
         purchase_date: getLocalDateString(),
@@ -277,6 +279,34 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                 </div>
             </div>
 
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="flex flex-col">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 ml-1">Filtrar por Cartão</label>
+                    <select
+                        value={filterCard}
+                        onChange={(e) => setFilterCard(e.target.value)}
+                        className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm"
+                    >
+                        <option value="Todos">Todos os Cartões</option>
+                        {cards.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                <div className="flex flex-col">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1 ml-1">Filtrar por Status</label>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className="bg-white border-2 border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm"
+                    >
+                        <option value="Todos">Todos os Status</option>
+                        <option value="PAGO">Pagos</option>
+                        <option value="EM ABERTO">Pendentes / Em Aberto</option>
+                        <option value="FUTURO">Futuros</option>
+                    </select>
+                </div>
+            </div>
+
             {/* Matrix View (like Excel) */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
                 <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -288,6 +318,8 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                             const isPaid = isMonthPaid(selectedMonth, card);
                             const cardHasItems = activeItems.some(i => i.card === card);
                             if (!cardHasItems) return null;
+                            if (filterCard !== 'Todos' && filterCard !== card) return null;
+                            
                             return (
                                 <button
                                     key={card}
@@ -321,20 +353,49 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {activeItems.length === 0 ? (
+                            {activeItems.filter(item => {
+                                const now = new Date();
+                                const currentYearMonth = getMonthStr(now);
+                                let statusText = 'EM ABERTO';
+
+                                if (item.isPaid) {
+                                    statusText = 'PAGO';
+                                } else if (selectedMonth > currentYearMonth) {
+                                    statusText = 'FUTURO';
+                                }
+
+                                if (filterCard !== 'Todos' && item.card !== filterCard) return false;
+                                if (filterStatus !== 'Todos' && statusText !== filterStatus) return false;
+
+                                return true;
+                            }).length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-2">
                                             <span className="material-symbols-outlined text-4xl text-slate-200">credit_card_off</span>
                                             <p className="text-slate-400 font-medium">
-                                                Nenhum gasto registrado para {new Date(selectedMonth.replace('.', '-') + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                                                Nenhum gasto encontrado com os filtros selecionados
                                             </p>
-                                            <p className="text-slate-300 text-xs">Clique em "Nova Compra" para realizar o primeiro lançamento.</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
-                                activeItems.map((item) => {
+                                activeItems.filter(item => {
+                                    const now = new Date();
+                                    const currentYearMonth = getMonthStr(now);
+                                    let statusText = 'EM ABERTO';
+
+                                    if (item.isPaid) {
+                                        statusText = 'PAGO';
+                                    } else if (selectedMonth > currentYearMonth) {
+                                        statusText = 'FUTURO';
+                                    }
+
+                                    if (filterCard !== 'Todos' && item.card !== filterCard) return false;
+                                    if (filterStatus !== 'Todos' && statusText !== filterStatus) return false;
+
+                                    return true;
+                                }).map((item) => {
                                     const now = new Date();
                                     const currentYearMonth = getMonthStr(now);
                                     let statusColor = 'text-blue-600 bg-blue-50';
