@@ -119,6 +119,14 @@ export interface CreditCardPayment {
   created_at?: string;
 }
 
+export interface CreditCardItemPayment {
+  id: string; // UUID
+  expense_id: string; // UUID
+  year_month: string; // YYYY.MM
+  is_paid: boolean;
+  created_at?: string;
+}
+
 
 export enum EmployeePaymentStatus {
   PAID = 'PAGO',
@@ -230,6 +238,7 @@ export interface AppState {
   dailyPayments: DailyPayment[];
   creditCardExpenses: CreditCardExpense[];
   creditCardPayments: CreditCardPayment[];
+  creditCardItemPayments: CreditCardItemPayment[];
   employees: Employee[];
   employeePayments: EmployeePayment[];
   events: CalendarEvent[];

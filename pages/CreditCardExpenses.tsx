@@ -11,6 +11,8 @@ interface CreditCardExpensesPageProps {
     onUpdateExpense: (expense: CreditCardExpense) => void;
     onDeleteExpense: (id: string) => void;
     onTogglePayment: (yearMonth: string, card: string, isPaid: boolean) => void;
+    itemPayments?: import('../types').CreditCardItemPayment[];
+    onToggleItemPayment?: (expenseId: string, yearMonth: string, isPaid: boolean) => void;
 }
 
 const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
@@ -19,7 +21,9 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
     onAddExpense,
     onUpdateExpense,
     onDeleteExpense,
-    onTogglePayment
+    onTogglePayment,
+    itemPayments = [],
+    onToggleItemPayment
 }) => {
     const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().slice(0, 7).replace('-', '.')); // AAAA.MM
     const [showModal, setShowModal] = useState(false);
@@ -67,7 +71,8 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                 // Se ValorMensal < 0 então Status = "EM ABERTO"
                 // Actually, the user wants to see -Value if active.
 
-                const isPaid = isMonthPaid(selectedMonth, exp.card);
+                const itemPayment = itemPayments.find(p => p.expense_id === exp.id && p.year_month === selectedMonth);
+                const isPaid = itemPayment ? itemPayment.is_paid : isMonthPaid(selectedMonth, exp.card);
 
                 return {
                     ...exp,
@@ -88,7 +93,10 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
         for (let i = 0; i < exp.total_installments; i++) {
             const d = new Date(purchaseDate.getFullYear(), purchaseDate.getMonth() + i, 1);
             const mStr = getMonthStr(d);
-            if (isMonthPaid(mStr, exp.card)) {
+            const itemPayment = itemPayments.find(p => p.expense_id === exp.id && p.year_month === mStr);
+            const isPaid = itemPayment ? itemPayment.is_paid : isMonthPaid(mStr, exp.card);
+            
+            if (isPaid) {
                 count++;
             }
         }
@@ -307,22 +315,53 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                 </div>
             </div>
 
-            {/* Matrix View (like Excel) */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
-                <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <h3 className="font-black text-slate-700 uppercase tracking-widest text-xs">
-                        Lançamentos em {new Date(selectedMonth.replace('.', '-') + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                        {cards.map(card => {
-                            const isPaid = isMonthPaid(selectedMonth, card);
-                            const cardHasItems = activeItems.some(i => i.card === card);
-                            if (!cardHasItems) return null;
-                            if (filterCard !== 'Todos' && filterCard !== card) return null;
-                            
-                            return (
+            {/* Tables Grouped by Card */}
+            {(() => {
+                const allFilteredItems = activeItems.filter(item => {
+                    const now = new Date();
+                    const currentYearMonth = getMonthStr(now);
+                    let statusText = 'EM ABERTO';
+
+                    if (item.isPaid) {
+                        statusText = 'PAGO';
+                    } else if (selectedMonth > currentYearMonth) {
+                        statusText = 'FUTURO';
+                    }
+
+                    if (filterCard !== 'Todos' && item.card !== filterCard) return false;
+                    if (filterStatus !== 'Todos' && statusText !== filterStatus) return false;
+
+                    return true;
+                });
+
+                if (allFilteredItems.length === 0) {
+                    return (
+                        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+                            <div className="px-6 py-20 text-center">
+                                <div className="flex flex-col items-center gap-2">
+                                    <span className="material-symbols-outlined text-4xl text-slate-200">credit_card_off</span>
+                                    <p className="text-slate-400 font-medium">
+                                        Nenhum gasto encontrado para {new Date(selectedMonth.replace('.', '-') + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })} com os filtros selecionados
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return cards.filter(c => filterCard === 'Todos' || c === filterCard).map(card => {
+                    const cardItems = allFilteredItems.filter(item => item.card === card);
+                    if (cardItems.length === 0) return null;
+                    const isPaid = isMonthPaid(selectedMonth, card);
+
+                    return (
+                        <div key={card} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+                            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <h3 className="font-black text-slate-700 uppercase tracking-widest text-xs flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-slate-400 text-lg">credit_card</span>
+                                    {card} - Lançamentos em {new Date(selectedMonth.replace('.', '-') + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                                </h3>
                                 <button
-                                    key={card}
                                     onClick={() => onTogglePayment(selectedMonth, card, !isPaid)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm border-2 ${isPaid
                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
@@ -334,124 +373,85 @@ const CreditCardExpensesPage: React.FC<CreditCardExpensesPageProps> = ({
                                     </span>
                                     {card}: {isPaid ? 'FATURA PAGA' : 'MARCAR COMO PAGO'}
                                 </button>
-                            );
-                        })}
-                    </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse whitespace-nowrap">
-                        <thead>
-                            <tr className="border-b border-slate-200 bg-slate-50/30">
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Data</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Descrição</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Cartão</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Parcela</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Valor Parcela</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Saldo Restante</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
-                                <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {activeItems.filter(item => {
-                                const now = new Date();
-                                const currentYearMonth = getMonthStr(now);
-                                let statusText = 'EM ABERTO';
-
-                                if (item.isPaid) {
-                                    statusText = 'PAGO';
-                                } else if (selectedMonth > currentYearMonth) {
-                                    statusText = 'FUTURO';
-                                }
-
-                                if (filterCard !== 'Todos' && item.card !== filterCard) return false;
-                                if (filterStatus !== 'Todos' && statusText !== filterStatus) return false;
-
-                                return true;
-                            }).length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <span className="material-symbols-outlined text-4xl text-slate-200">credit_card_off</span>
-                                            <p className="text-slate-400 font-medium">
-                                                Nenhum gasto encontrado com os filtros selecionados
-                                            </p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                activeItems.filter(item => {
-                                    const now = new Date();
-                                    const currentYearMonth = getMonthStr(now);
-                                    let statusText = 'EM ABERTO';
-
-                                    if (item.isPaid) {
-                                        statusText = 'PAGO';
-                                    } else if (selectedMonth > currentYearMonth) {
-                                        statusText = 'FUTURO';
-                                    }
-
-                                    if (filterCard !== 'Todos' && item.card !== filterCard) return false;
-                                    if (filterStatus !== 'Todos' && statusText !== filterStatus) return false;
-
-                                    return true;
-                                }).map((item) => {
-                                    const now = new Date();
-                                    const currentYearMonth = getMonthStr(now);
-                                    let statusColor = 'text-blue-600 bg-blue-50';
-                                    let statusText = 'EM ABERTO';
-
-                                    if (item.isPaid) {
-                                        statusColor = 'text-emerald-600 bg-emerald-50';
-                                        statusText = 'PAGO';
-                                    } else if (selectedMonth > currentYearMonth) {
-                                        statusColor = 'text-rose-600 bg-rose-50';
-                                        statusText = 'FUTURO';
-                                    }
-
-                                    return (
-                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-6 py-4 text-sm font-medium text-slate-600">
-                                                {new Date(item.purchase_date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-slate-900">
-                                                {item.description}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-black rounded-md">{item.card.toUpperCase()}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center text-sm font-medium text-slate-500">
-                                                {item.currentInstallment}/{item.total_installments}
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <span className="text-sm font-black text-rose-600">
-                                                    {formatCurrency(item.monthlyValue)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <span className="text-sm font-medium text-slate-600">
-                                                    {formatCurrency(item.balance)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusColor}`}>
-                                                    {statusText}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center text-slate-400">
-                                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => { setEditingExpense(item); setFormData(item); setShowModal(true); }} className="hover:text-blue-600 p-1"><span className="material-symbols-outlined text-lg">edit</span></button>
-                                                    <button onClick={() => onDeleteExpense(item.id)} className="hover:text-rose-600 p-1"><span className="material-symbols-outlined text-lg">delete</span></button>
-                                                </div>
-                                            </td>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse whitespace-nowrap">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 bg-slate-50/30">
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Data</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Descrição</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Cartão</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Parcela</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Valor Parcela</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Saldo Restante</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Status</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Ações</th>
                                         </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {cardItems.map((item) => {
+                                            const now = new Date();
+                                            const currentYearMonth = getMonthStr(now);
+                                            let statusColor = 'text-blue-600 bg-blue-50';
+                                            let statusText = 'EM ABERTO';
+
+                                            if (item.isPaid) {
+                                                statusColor = 'text-emerald-600 bg-emerald-50';
+                                                statusText = 'PAGO';
+                                            } else if (selectedMonth > currentYearMonth) {
+                                                statusColor = 'text-rose-600 bg-rose-50';
+                                                statusText = 'FUTURO';
+                                            }
+
+                                            return (
+                                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                    <td className="px-6 py-4 text-sm font-medium text-slate-600">
+                                                        {new Date(item.purchase_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-slate-900">
+                                                        {item.description}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-black rounded-md">{item.card.toUpperCase()}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center text-sm font-medium text-slate-500">
+                                                        {item.currentInstallment}/{item.total_installments}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-sm font-black text-rose-600">
+                                                            {formatCurrency(item.monthlyValue)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-sm font-medium text-slate-600">
+                                                            {formatCurrency(item.balance)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <button 
+                                                            onClick={() => onToggleItemPayment?.(item.id, selectedMonth, !item.isPaid)}
+                                                            title={item.isPaid ? "Marcar como pendente" : "Marcar como pago"}
+                                                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all hover:scale-105 active:scale-95 shadow-sm ${statusColor}`}
+                                                        >
+                                                            {statusText}
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center text-slate-400">
+                                                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => { setEditingExpense(item); setFormData(item); setShowModal(true); }} className="hover:text-blue-600 p-1"><span className="material-symbols-outlined text-lg">edit</span></button>
+                                                            <button onClick={() => onDeleteExpense(item.id)} className="hover:text-rose-600 p-1"><span className="material-symbols-outlined text-lg">delete</span></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    );
+                });
+            })()}
 
             {/* Summary by Card */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

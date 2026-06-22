@@ -37,6 +37,7 @@ const App: React.FC = () => {
     dailyPayments: [],
     creditCardExpenses: [],
     creditCardPayments: [],
+    creditCardItemPayments: [],
     employees: [],
     employeePayments: [],
     events: [],
@@ -77,7 +78,7 @@ const App: React.FC = () => {
           ...prev,
           currentUser: null,
           users: [], clients: [], invoices: [], payables: [], dailyPayments: [], events: [],
-          creditCardExpenses: [], creditCardPayments: [], futureEntries: [], fenixLoans: [],
+          creditCardExpenses: [], creditCardPayments: [], creditCardItemPayments: [], futureEntries: [], fenixLoans: [],
           loading: false
         }));
       }
@@ -121,7 +122,7 @@ const App: React.FC = () => {
         return { data: allData, error: null };
       };
 
-      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes, fenixDebtsRes] = await Promise.all([
+      const [clientsRes, invoicesRes, eventsRes, payablesRes, dailyPaymentsRes, creditCardExpensesRes, creditCardPaymentsRes, creditCardItemPaymentsRes, employeesRes, employeePaymentsRes, contractsRes, futureEntriesRes, fenixLoansRes, bankFeesRes, irpfReceiptsRes, fenixDebtsRes] = await Promise.all([
         fetchAllRows('clients', '*', 'name', true),
         fetchAllRows('invoices', '*, profiles(name)', 'due_date', false),
         fetchAllRows('calendar_events', 'id, title, description, event_date, event_time, created_by, profiles(name)'),
@@ -129,6 +130,7 @@ const App: React.FC = () => {
         fetchAllRows('daily_payments', '*, profiles(name)', 'date', false),
         fetchAllRows('credit_card_expenses', '*', 'purchase_date', false),
         fetchAllRows('credit_card_payments', '*'),
+        fetchAllRows('credit_card_item_payments', '*'),
         fetchAllRows('employees', '*', 'name', true),
         fetchAllRows('employee_payments', '*'),
         fetchAllRows('contracts', '*'),
@@ -183,6 +185,7 @@ const App: React.FC = () => {
 
         const creditCardExpenses = (creditCardExpensesRes?.data || []) as CreditCardExpense[];
         const creditCardPayments = (creditCardPaymentsRes?.data || []) as CreditCardPayment[];
+        const creditCardItemPayments = (creditCardItemPaymentsRes?.data || []) as CreditCardItemPayment[];
 
         setState(prev => ({
           ...prev,
@@ -196,6 +199,7 @@ const App: React.FC = () => {
           })) as DailyPayment[],
           creditCardExpenses,
           creditCardPayments,
+          creditCardItemPayments,
           employees: (employeesRes?.data || []) as Employee[],
           employeePayments: (employeePaymentsRes?.data || []) as EmployeePayment[],
           events: events,
@@ -873,6 +877,24 @@ const App: React.FC = () => {
     }
   };
 
+  const toggleCreditCardItemPayment = async (expenseId: string, yearMonth: string, isPaid: boolean) => {
+    const existing = state.creditCardItemPayments.find(p => p.expense_id === expenseId && p.year_month === yearMonth);
+    if (existing) {
+      const { error } = await supabase.from('credit_card_item_payments').update({ is_paid: isPaid }).eq('id', existing.id);
+      if (!error) {
+        setState(prev => ({
+          ...prev,
+          creditCardItemPayments: prev.creditCardItemPayments.map(p => p.id === existing.id ? { ...p, is_paid: isPaid } : p)
+        }));
+      }
+    } else {
+      const { data, error } = await supabase.from('credit_card_item_payments').insert([{ expense_id: expenseId, year_month: yearMonth, is_paid: isPaid }]).select().single();
+      if (data && !error) {
+        setState(prev => ({ ...prev, creditCardItemPayments: [...prev.creditCardItemPayments, data] }));
+      }
+    }
+  };
+
   const addEmployee = async (employee: Omit<Employee, 'id' | 'created_at'>) => {
     const { data, error } = await supabase.from('employees').insert([employee]).select().single();
     if (data && !error) {
@@ -1034,10 +1056,12 @@ const App: React.FC = () => {
         return <CreditCardExpensesPage
           expenses={state.creditCardExpenses}
           payments={state.creditCardPayments}
+          itemPayments={state.creditCardItemPayments}
           onAddExpense={addCreditCardExpense}
           onUpdateExpense={updateCreditCardExpense}
           onDeleteExpense={deleteCreditCardExpense}
           onTogglePayment={toggleCreditCardPayment}
+          onToggleItemPayment={toggleCreditCardItemPayment}
         />;
 
       case 'relatorios': return <ReportsPage state={state} />;
