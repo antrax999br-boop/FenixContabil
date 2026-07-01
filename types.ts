@@ -131,7 +131,8 @@ export interface CreditCardItemPayment {
 export enum EmployeePaymentStatus {
   PAID = 'PAGO',
   PENDING = 'PENDENTE',
-  OVERDUE = 'ATRASADO'
+  OVERDUE = 'ATRASADO',
+  SCHEDULED = 'AGENDADO'
 }
 
 export interface Employee {

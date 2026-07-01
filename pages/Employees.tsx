@@ -225,6 +225,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                         if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
                         else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
                         else if (val === 'PENDENTE') data.cell.styles.textColor = [245, 158, 11];
+                        else if (val === 'AGENDADO') data.cell.styles.textColor = [59, 130, 246];
                     }
                 }
             });
@@ -438,11 +439,13 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({
                                                             className={`text-[10px] font-black px-3 py-1.5 rounded-full border cursor-pointer outline-none transition-all
                             ${status === EmployeePaymentStatus.PAID ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                                                     status === EmployeePaymentStatus.OVERDUE ? 'bg-rose-100 text-rose-700 border-rose-200' :
+                                                                        status === EmployeePaymentStatus.SCHEDULED ? 'bg-blue-100 text-blue-700 border-blue-200' :
                                                                         'bg-amber-100 text-amber-700 border-amber-200'}`}
                                                         >
                                                             <option value={EmployeePaymentStatus.PENDING}>PENDENTE</option>
                                                             <option value={EmployeePaymentStatus.PAID}>PAGO</option>
                                                             <option value={EmployeePaymentStatus.OVERDUE}>ATRASADO</option>
+                                                            <option value={EmployeePaymentStatus.SCHEDULED}>AGENDADO</option>
                                                         </select>
                                                     </div>
                                                 </td>
