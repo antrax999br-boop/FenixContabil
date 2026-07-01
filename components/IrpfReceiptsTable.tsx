@@ -6,12 +6,13 @@ import { formatCurrency } from '../utils/calculations';
 
 interface IrpfReceiptsTableProps {
     receipts: IrpfReceipt[];
+    selectedMonth?: string;
     onAddReceipt: (receipt: Omit<IrpfReceipt, 'id' | 'created_at'>) => void;
     onUpdateReceipt: (receipt: IrpfReceipt) => void;
     onDeleteReceipt: (id: string) => void;
 }
 
-export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, onAddReceipt, onUpdateReceipt, onDeleteReceipt }) => {
+export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, selectedMonth, onAddReceipt, onUpdateReceipt, onDeleteReceipt }) => {
     const getLocalDateString = () => {
         const d = new Date();
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -33,7 +34,12 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
     const [editingDeposit, setEditingDeposit] = useState(false);
 
     const filteredReceipts = receipts
-        .filter(r => r.date.startsWith(yearFilter))
+        .filter(r => {
+            if (selectedMonth && selectedMonth !== 'all') {
+                return r.date.startsWith(selectedMonth);
+            }
+            return r.date.startsWith(yearFilter);
+        })
         .sort((a, b) => a.date.localeCompare(b.date)); // Sort by date ascending (month by month)
 
     const handleAdd = () => {
@@ -103,7 +109,8 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
         const doc = new jsPDF();
 
         doc.setFontSize(16);
-        doc.text(`Recebimentos IRPF - Ano ${yearFilter}`, 14, 20);
+        const titleSuffix = selectedMonth && selectedMonth !== 'all' ? `Mês ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}` : `Ano ${yearFilter}`;
+        doc.text(`Recebimentos IRPF - ${titleSuffix}`, 14, 20);
 
         const headers = ['DATA', 'NOME DA PESSOA', 'VALOR'];
 
@@ -214,7 +221,7 @@ export const IrpfReceiptsTable: React.FC<IrpfReceiptsTableProps> = ({ receipts, 
                         <tbody className="divide-y divide-slate-100">
                             {filteredReceipts.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="p-8 text-center text-slate-400 font-medium text-sm">Nenhum recebimento registrado para {yearFilter}.</td>
+                                    <td colSpan={4} className="p-8 text-center text-slate-400 font-medium text-sm">Nenhum recebimento registrado para {selectedMonth && selectedMonth !== 'all' ? `${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}` : yearFilter}.</td>
                                 </tr>
                             ) : filteredReceipts.map(receipt => {
                                 const isEditing = editingRowId === receipt.id;

@@ -290,6 +290,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({
                 </div>
                 <IrpfReceiptsTable
                     receipts={state.irpfReceipts}
+                    selectedMonth={selectedMonth}
                     onAddReceipt={onAddIrpfReceipt}
                     onUpdateReceipt={onUpdateIrpfReceipt}
                     onDeleteReceipt={onDeleteIrpfReceipt}
