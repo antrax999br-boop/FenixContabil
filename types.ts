@@ -7,7 +7,8 @@ export enum UserProfile {
 export enum InvoiceStatus {
   PAID = 'PAGO',
   NOT_PAID = 'NAO_PAGO',
-  OVERDUE = 'ATRASADO'
+  OVERDUE = 'ATRASADO',
+  SCHEDULED = 'AGENDADO'
 }
 
 export interface User {

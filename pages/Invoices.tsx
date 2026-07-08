@@ -279,6 +279,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
   const renderStatusBadge = (invoice: Invoice, categoryIcon: string, iconColor: string) => {
     const isPaid = invoice.status === InvoiceStatus.PAID;
     const isOverdue = invoice.status === InvoiceStatus.OVERDUE;
+    const isScheduled = invoice.status === InvoiceStatus.SCHEDULED;
 
     let badgeColor = "bg-amber-100 text-amber-700 border-amber-200";
     let statusText = "PENDENTE";
@@ -289,6 +290,9 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     } else if (isOverdue) {
       badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
       statusText = "ATRASADO";
+    } else if (isScheduled) {
+      badgeColor = "bg-blue-100 text-blue-700 border-blue-200";
+      statusText = "AGENDADO";
     }
 
     return (
@@ -358,6 +362,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
           const val = data.cell.text[0];
           if (val === 'PAGO') data.cell.styles.textColor = [16, 185, 129];
           else if (val === 'ATRASADO') data.cell.styles.textColor = [225, 29, 72];
+          else if (val === 'AGENDADO') data.cell.styles.textColor = [59, 130, 246];
         }
       }
     });
@@ -366,6 +371,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     const totalPaid = filteredInvoices.filter(inv => inv.status === InvoiceStatus.PAID).reduce((acc, inv) => acc + (inv.final_value || 0), 0);
     const totalPending = filteredInvoices.filter(inv => inv.status === InvoiceStatus.NOT_PAID).reduce((acc, inv) => acc + (inv.final_value || 0), 0);
     const totalOverdue = filteredInvoices.filter(inv => inv.status === InvoiceStatus.OVERDUE).reduce((acc, inv) => acc + (inv.final_value || 0), 0);
+    const totalScheduled = filteredInvoices.filter(inv => inv.status === InvoiceStatus.SCHEDULED).reduce((acc, inv) => acc + (inv.final_value || 0), 0);
 
     let currentY = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(12);
@@ -384,6 +390,10 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
     currentY += 6;
     doc.setTextColor(225, 29, 72);
     doc.text(`TOTAL ATRASADO: ${formatCurrency(totalOverdue)}`, 196, currentY, { align: 'right' });
+
+    currentY += 6;
+    doc.setTextColor(59, 130, 246);
+    doc.text(`TOTAL AGENDADO: ${formatCurrency(totalScheduled)}`, 196, currentY, { align: 'right' });
 
     doc.save(`Relatorio_Fenix_${filter}_${period.replace(/\s/g, '')}.pdf`);
   };
@@ -582,6 +592,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
               <option value={InvoiceStatus.PAID}>Somente Pagos</option>
               <option value={InvoiceStatus.NOT_PAID}>Somente Pendentes</option>
               <option value={InvoiceStatus.OVERDUE}>Somente Atrasados</option>
+              <option value={InvoiceStatus.SCHEDULED}>Somente Agendados</option>
             </select>
           </div>
         </div>
@@ -984,11 +995,11 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                     </div>
                     <div className="col-span-2">
                       <label className="block text-sm font-semibold text-slate-700 mb-1">Status</label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.NOT_PAID }))}
-                          className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status !== InvoiceStatus.PAID ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status === InvoiceStatus.NOT_PAID ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
                         >
                           EM ABERTO
                         </button>
@@ -998,6 +1009,13 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
                           className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status === InvoiceStatus.PAID ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
                         >
                           PAGO
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewInvoice(prev => ({ ...prev, status: InvoiceStatus.SCHEDULED }))}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${newInvoice.status === InvoiceStatus.SCHEDULED ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-500 border-slate-200'}`}
+                        >
+                          AGENDADO
                         </button>
                       </div>
                     </div>
