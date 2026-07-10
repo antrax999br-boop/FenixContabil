@@ -30,7 +30,7 @@ export const countBusinessDays = (startDate: Date, endDate: Date): number => {
 };
 
 export const calculateInvoiceStatusAndValues = (invoice: Invoice, client: Client): Invoice => {
-  if (invoice.status === InvoiceStatus.PAID) {
+  if (invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.SCHEDULED) {
     return invoice;
   }
 
