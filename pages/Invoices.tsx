@@ -258,7 +258,7 @@ const InvoicesPage: React.FC<InvoicesPageProps> = ({ state, onAdd, onPay, onUpda
       invoice_number: getDisplayNumber(inv.invoice_number),
       client_id: inv.client_id || '',
       individual_name: inv.individual_name || '',
-      original_value: inv.original_value.toString(),
+      original_value: inv.original_value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       due_date: inv.due_date,
       status: inv.status,
       is_retirado: !!inv.is_retirado
